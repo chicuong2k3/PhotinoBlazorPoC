@@ -1,0 +1,32 @@
+@inject IDialogService DialogService
+
+<HUIDialog OnCancelClick="HandleCancelClick">
+    <DialogContent>
+        <MudStack Style="padding: 8px">
+            <MudText Typo="Typo.body1">Bạn có chắc chắn muốn đóng ứng dụng không?</MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <HUIButton Variant="Variant.Outlined" OnClick="HandleCancelClick" Style="width: 100%"
+                   Ripple="false" DropShadow="false">
+            Không
+        </HUIButton>
+        <HUIButton Variant="Variant.Filled" Color="Color.Primary" Style="width: 100%"
+        OnClick="HandleConfirmClick"
+                   Ripple="false" DropShadow="false">
+            Có
+        </HUIButton>
+    </DialogActions>
+</HUIDialog>
+
+@code {
+
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+
+    private void HandleCancelClick()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void HandleConfirmClick() => MudDialog?.Close(DialogResult.Ok(true));
+}

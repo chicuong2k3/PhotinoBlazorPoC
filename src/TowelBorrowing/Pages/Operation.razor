@@ -1,0 +1,197 @@
+@page "/operation/{CardNumber}"
+
+@inject IGuestCardService GuestCardService
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject ILogger<Operation> Logger
+
+<MudStack Spacing="2"> 
+    <MudStack Row>
+        <MudText>
+            TÒA: @_card?.Building
+        </MudText>
+        <MudText>
+            TẦNG: @_card?.Floor
+        </MudText>
+    </MudStack>
+    <MudText Typo="Typo.h2">
+        PHÒNG: @_card?.RoomNo
+    </MudText>
+
+    <MudStack Row>
+        <MudText Typo="Typo.subtitle2" Color="Color.Info">Đã mượn: @_borrowedCount</MudText>
+        <MudText Typo="Typo.subtitle2">Đã trả: @_returnedCount</MudText>
+        <MudText Typo="Typo.subtitle2" Color="Color.Error">Còn thiếu: @(_borrowedCount - _returnedCount)</MudText>
+    </MudStack>
+
+    <MudGrid Spacing="2">
+        <MudItem sm="12">
+            <MudAlert Severity="Severity.Warning">
+                Bạn chỉ đặt tối đa @_maxBorrow <br />
+                @if (RemainCount > 0)
+                {
+                    <p>Còn đặt được @RemainCount</p>
+                }
+                else
+                {
+                    <p>Bạn đã đặt nhiều hơn số lượng tối đa</p>
+                }
+            </MudAlert>
+        </MudItem>
+        <MudItem sm="6">
+            <MudInput @bind-Value="@_borrowCount" Disabled="@(!_borrowEnabled)" Immediate Style="width: 100%"
+                      Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng mượn" />
+
+            
+        </MudItem>
+        <MudItem sm="6">
+            <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
+                       OnClick="@(() => _borrowEnabled = !_borrowEnabled)"
+                       Ripple="false" DropShadow="false">
+                Mượn
+            </HUIButton>
+        </MudItem>
+
+        <MudItem sm="6">
+            <MudInput @bind-Value="@_returnCount" Disabled="@(!_returnEnabled)" Immediate Style="width: 100%"
+                      Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng trả" />
+        </MudItem>
+        <MudItem sm="6">
+            <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
+                       OnClick="@(() => _returnEnabled = !_returnEnabled)"
+                       Ripple="false" DropShadow="false">
+                Trả
+            </HUIButton>
+        </MudItem>
+        <MudItem sm="6">
+            <HUIButton Color="Color.Secondary" Variant="Variant.Filled" Style="width: 100%"
+                       OnClick="@(() => NavigationManager.NavigateTo("/"))"
+                       Ripple="false" DropShadow="false">
+                Thoát
+            </HUIButton>
+        </MudItem>
+        <MudItem sm="6">
+            <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
+                OnClick="Submit" Disabled="@(_borrowCount <= 0 && _returnCount <= 0)"
+                       Ripple="false" DropShadow="false">
+                Xác nhận
+            </HUIButton>
+        </MudItem>
+    </MudGrid>
+
+    @if (!string.IsNullOrEmpty(_errMsg))
+    {
+        <MudAlert Severity="Severity.Error">
+            @_errMsg
+        </MudAlert>
+    }
+</MudStack>
+
+
+
+    @code {
+
+    [Parameter]
+    public string CardNumber { get; set; } = string.Empty;
+
+    private GuestCard? _card;
+    private int _borrowCount = 0;
+    private int _returnCount = 0;
+    private bool _borrowEnabled = false;
+    private bool _returnEnabled = false;
+
+    private int _maxBorrow;
+    private int _borrowedCount;
+    private int _returnedCount;
+    private int RemainCount => _maxBorrow - _borrowedCount;
+    private string? _errMsg = null;
+
+    protected override void OnInitialized()
+    {
+        _card = DbContext.GuestCards
+            .Where(x => x.CardNumber == CardNumber)
+            .FirstOrDefault();
+
+        if (_card == null) return;
+
+        var maxClientMonitor = DbContext.MaxClientMonitors
+                .Where(x => x.RoomNo == _card.RoomNo
+                    && x.Building == _card.Building
+                    && x.Date.Date == DateTime.Now.Date)
+                .FirstOrDefault();
+        if (maxClientMonitor != null)
+        {
+            _maxBorrow = maxClientMonitor.MaxQuantity;
+        }
+
+        var borrowRecord = DbContext.BorrowRecords
+            .Where(x => x.GuestCardNumber == _card.CardNumber
+                    && x.CreatedAt.Date == DateTime.Now.Date)
+                .FirstOrDefault();
+        if (borrowRecord != null)
+        {
+            _borrowedCount = borrowRecord.BorrowQuantity;
+            _returnedCount = borrowRecord.ReturnQuantity;
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (_card == null) return;
+
+        _errMsg = null;
+
+        try
+        {
+            var borrowRecord = DbContext.BorrowRecords
+                        .Where(x => x.GuestCardNumber == _card.CardNumber
+                           && x.CreatedAt.Date == DateTime.Now.Date)
+                        .FirstOrDefault();
+
+            if (borrowRecord == null)
+            {
+                borrowRecord = new BorrowRecord(_card.CardNumber);
+                DbContext.BorrowRecords.Add(borrowRecord);
+            }
+
+            if (_borrowEnabled)
+            {
+                var result = borrowRecord.Borrow(_borrowCount);
+                if (result.IsFailed)
+                {
+                    _errMsg = result.Errors[0].Message;
+                    return;
+                }
+            }
+
+            if (_returnEnabled)
+            {
+                var result = borrowRecord.Return(_returnCount);
+                if (result.IsFailed)
+                {
+                    _errMsg = result.Errors[0].Message;
+                    return;
+                }
+            }
+
+            await DbContext.SaveChangesAsync();
+            NavigationManager.NavigateTo("/");
+
+            Snackbar.Add($"Thao tác thành công!", Severity.Success, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error while borrowing/returning: {errMessage}", e.Message);
+            Snackbar.Add($"Có lỗi xảy ra! Thử lại sau!", Severity.Error, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+    }
+}

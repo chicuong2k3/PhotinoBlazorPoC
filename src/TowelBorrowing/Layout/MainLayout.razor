@@ -1,0 +1,57 @@
+@using Photino.Blazor.CustomWindow.Components
+@using System.Threading.Tasks
+@inherits LayoutComponentBase
+
+@inject IDialogService DialogService
+
+<HUIThemeProvider Theme="HUITheme.Light" />
+<MudPopoverProvider />
+<MudDialogProvider CloseOnEscapeKey="false" BackdropClick="true" FullWidth="true" CloseButton="false" />
+<MudSnackbarProvider />
+
+
+<CustomWindow Title="Mượn Khăn" Maximized="false" HeaderHeight="40" @ref="@_customWindow"
+              MaximizeOnHeaderDoubleClick="false"
+              
+    WindowClosingCallback="OnClosing">
+    <WindowContent>
+        <MudMainContent>
+            <MudContainer Class="px-8">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </WindowContent>
+</CustomWindow>
+
+
+@code {
+    private CustomWindow? _customWindow;
+    private bool _allowClose = false;
+
+    private bool OnClosing()
+    {
+        if (_allowClose) return false;
+        InvokeAsync(OpenCloseConfirm);
+        return true;
+    }
+
+    private async Task OpenCloseConfirm()
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraSmall,
+            NoHeader = true,
+            BackdropClick = false
+        };
+
+        var dialog = await DialogService.ShowAsync<CloseAppConfirmDialog>("Villa", new(), options);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult != null && !dialogResult.Canceled)
+        {
+            _allowClose = true;
+            _customWindow?.Close();
+        }
+    }
+
+}

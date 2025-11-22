@@ -1,0 +1,227 @@
+@page "/"
+
+@inject IGuestCardService GuestCardService
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IImportService ImportService
+@inject IExportService ExportService
+@inject ILogger<Home> Logger
+@inject IDialogService DialogService
+
+<MudStack>
+    <MudStack Row>
+        <HUIButton OnClick="ScanCard" Style="width: 100%"
+               Color="Color.Primary" Variant="Variant.Filled" Loading="@_isScanning"
+               Ripple="false" DropShadow="false">
+            Quét Phòng
+        </HUIButton>
+        <HUIButton OnClick="OpenFindVilla" Style="width: 100%"
+                   Color="Color.Primary" Variant="Variant.Filled" Loading="@_isScanning"
+                   Ripple="false" DropShadow="false">
+            Villa
+        </HUIButton>
+    </MudStack>
+
+    <MudFileUpload T="IBrowserFile" FilesChanged="ImportMaxTowel" Style="width: 100%">
+        <ActivatorContent>
+            <HUIButton Variant="Variant.Filled" Loading="@_isImporting" Style="width: 100%"
+                       Color="Color.Primary" Ripple="false" DropShadow="false"
+                       StartIcon="@Icons.Material.Filled.ImportExport">
+                Nhập Số Lượng Khăn Tối Đa Mỗi Ngày  
+            </HUIButton>
+        </ActivatorContent>
+    </MudFileUpload>
+
+    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Loading="@_isExporting"
+               StartIcon="@Icons.Material.Filled.ImportExport"
+               OnClick="ExportExcel" 
+               Ripple="false" DropShadow="false">
+        Xuất Excel Cuối Ngày
+    </HUIButton>
+</MudStack>
+
+@code {
+    private bool _isScanning = false;
+    private bool _isImporting = false;
+    private bool _isExporting = false;
+    IList<IBrowserFile> _files = new List<IBrowserFile>();
+
+    private async Task ScanCard()
+    {
+        _isScanning = true;
+
+        var cardOcrResult = await GuestCardService.ExtractGuestCardAsync();
+        if (cardOcrResult.CardInfo != null && string.IsNullOrEmpty(cardOcrResult.ErrorMessage))
+        {
+            var existingCard = DbContext.GuestCards
+                .Where(c => c.CardNumber == cardOcrResult.CardInfo.Card)
+                .FirstOrDefault();
+
+            if (existingCard == null)
+            {
+                existingCard = new GuestCard()
+                {
+                    CardNumber = cardOcrResult.CardInfo.Card,
+                    HolderName = cardOcrResult.CardInfo.HolderName,
+                    Building = cardOcrResult.CardInfo.Building,
+                    Floor = cardOcrResult.CardInfo.Floor,
+                    RoomNo = cardOcrResult.CardInfo.RoomNo
+                };
+
+                DbContext.GuestCards.Add(existingCard);
+                await DbContext.SaveChangesAsync();
+
+            }
+            NavigationManager.NavigateTo($"/operation/{existingCard.CardNumber}");
+        }
+        else
+        {
+            Snackbar.Add($"OCR thất bại: {cardOcrResult.ErrorMessage}. Vui lòng thử lại!", Severity.Error, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+
+        _isScanning = false;
+    }
+
+    private async Task ImportMaxTowel(IBrowserFile file)
+    {
+        _isImporting = true;
+
+        using var stream = file.OpenReadStream();
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        byte[] fileBytes = ms.ToArray();
+        var rows = ImportService.ReadExcel(fileBytes);
+
+        foreach (var row in rows)
+        {
+            var roomNoStr = row[0];
+            var buildingStr = row[1];
+            var maxStr = row[2];
+
+            if (!int.TryParse(roomNoStr, out int roomNo) ||
+            !int.TryParse(buildingStr, out int building) ||
+            !int.TryParse(maxStr, out int max)) {
+                continue;  
+            }
+
+            var date = GetFileDate(Path.GetFileNameWithoutExtension(file.Name));
+            if (date == null) return;
+
+            try
+            {
+                var maxClientMonitor = new MaxClientMonitor(buildingStr, roomNoStr, max, date.Value);
+                DbContext.MaxClientMonitors.Add(maxClientMonitor);
+                await DbContext.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _isImporting = false;
+            }
+        }
+
+        Snackbar.Add("Thao tác thành công!", Severity.Success, (cfg) =>
+        {
+            cfg.RequireInteraction = false;
+            cfg.VisibleStateDuration = 800;
+        });
+    }
+
+    private async Task ExportExcel()
+    {
+        try
+        {
+            _isExporting = true;
+
+            var borrowRecords = DbContext.BorrowRecords
+                    .Where(x => x.CreatedAt.Date == DateTime.Now.Date)
+                    .ToList();
+
+            if (!borrowRecords.Any())
+            {
+                Snackbar.Add("Không có khách nào chưa trả khăn!", Severity.Info, (cfg) =>
+                {
+                    cfg.RequireInteraction = false;
+                    cfg.VisibleStateDuration = 800;
+                });
+                return;
+            }
+
+            ExportService.ExportBorrowInfo(borrowRecords);
+            Snackbar.Add("Export thành công!", Severity.Success, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error while exporting borrow information: {errMessage}", e.Message);
+            Snackbar.Add("Có lỗi xảy ra! Thử lại sau!", Severity.Error, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        finally
+        {
+            _isExporting = false;
+        }
+    }
+
+    private DateTime? GetFileDate(string fileName)
+    {
+        var dateStr = fileName.Substring("Import_".Length);
+        if (DateTime.TryParseExact(
+            dateStr,
+            "dd-MM-yyyy",
+            null,
+            System.Globalization.DateTimeStyles.None,
+            out var date))
+        {
+            return date;
+        }
+
+        return null;
+    }
+
+    private async Task OpenFindVilla()
+    {
+        var parameters = new DialogParameters<VillaInputDialog>();
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+        var dialog = await DialogService.ShowAsync<VillaInputDialog>("Villa", parameters, options);
+        var dialogResult = await dialog.Result;
+
+        if (dialogResult != null && !dialogResult.Canceled)
+        {
+            var villaRoomNo = (string)dialogResult.Data!;
+            var guestCard = DbContext.GuestCards
+                        .Where(x => x.Building == "Villa" && x.RoomNo == villaRoomNo)
+                        .FirstOrDefault();
+
+            if (guestCard != null)
+            {
+                NavigationManager.NavigateTo($"/operation/{guestCard.CardNumber}");
+            }
+            else
+            {
+                Snackbar.Add("Villa không tồn tại!", Severity.Error, (cfg) =>
+                {
+                    cfg.RequireInteraction = false;
+                    cfg.VisibleStateDuration = 800;
+                });
+            }
+        }
+    }
+}

@@ -1,0 +1,45 @@
+@inject IDialogService DialogService
+
+<HUIDialog OnCancelClick="HandleCancelClick">
+    <DialogContent>
+        <MudStack Row>
+            <MudInput @bind-Value="@_villaRoomNo" Immediate Style="width: 100%"
+                      Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng trả" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <HUIButton Variant="Variant.Outlined" OnClick="HandleCancelClick"
+                   Ripple="false" DropShadow="false">
+            Thoát
+        </HUIButton>
+        <HUIButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleConfirmClick"
+                   Ripple="false" DropShadow="false">
+            Xác nhận
+        </HUIButton>
+    </DialogActions>
+</HUIDialog>
+
+@code {
+
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    private string _villaRoomNo = string.Empty;
+    private bool _isScanning = false;
+
+    private void HandleCancelClick()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void HandleConfirmClick()
+    {
+        if (int.TryParse(_villaRoomNo, out var parsedNo))
+        {
+            MudDialog?.Close(DialogResult.Ok(_villaRoomNo));
+        }
+        else
+        {
+            
+        }
+
+    }
+}
