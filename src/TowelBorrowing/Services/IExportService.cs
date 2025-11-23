@@ -4,5 +4,5 @@ namespace TowelBorrowing.Services;
 
 public interface IExportService
 {
-	void ExportBorrowInfo(List<BorrowRecord> borrowRecords);
+	Task ExportBorrowInfo(List<BorrowRecord> borrowRecords);
 }

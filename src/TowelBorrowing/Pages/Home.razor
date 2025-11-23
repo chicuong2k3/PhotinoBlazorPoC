@@ -97,48 +97,56 @@
     {
         _isImporting = true;
 
-        using var stream = file.OpenReadStream();
-        using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
-        byte[] fileBytes = ms.ToArray();
-        var rows = ImportService.ReadExcel(fileBytes);
-
-        foreach (var row in rows)
+        try
         {
-            var roomNoStr = row[0];
-            var buildingStr = row[1];
-            var maxStr = row[2];
+            using var stream = file.OpenReadStream();
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            byte[] fileBytes = ms.ToArray();
+            var rows = ImportService.ReadExcel(fileBytes);
 
-            if (!int.TryParse(roomNoStr, out int roomNo) ||
-            !int.TryParse(buildingStr, out int building) ||
-            !int.TryParse(maxStr, out int max)) {
-                continue;  
-            }
-
-            var date = GetFileDate(Path.GetFileNameWithoutExtension(file.Name));
-            if (date == null) return;
-
-            try
+            foreach (var row in rows)
             {
+                var roomNoStr = row[0];
+                var buildingStr = row[1];
+                var maxStr = row[2];
+
+                if (!int.TryParse(roomNoStr, out int roomNo) ||
+                    (!int.TryParse(buildingStr, out int building) && buildingStr != "Villa") ||
+                !int.TryParse(maxStr, out int max))
+                {
+                    continue;
+                }
+
+                var date = GetFileDate(Path.GetFileNameWithoutExtension(file.Name));
+                if (date == null) return;
+
                 var maxClientMonitor = new MaxClientMonitor(buildingStr, roomNoStr, max, date.Value);
                 DbContext.MaxClientMonitors.Add(maxClientMonitor);
                 await DbContext.SaveChangesAsync();
+
             }
-            catch (Exception)
+
+            Snackbar.Add("Thao tác thành công!", Severity.Success, (cfg) =>
             {
-                throw;
-            }
-            finally
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Có lỗi xảy ra!", Severity.Error, (cfg) =>
             {
-                _isImporting = false;
-            }
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        finally
+        {
+            _isImporting = false;
         }
 
-        Snackbar.Add("Thao tác thành công!", Severity.Success, (cfg) =>
-        {
-            cfg.RequireInteraction = false;
-            cfg.VisibleStateDuration = 800;
-        });
+        
     }
 
     private async Task ExportExcel()
@@ -163,7 +171,7 @@
                 return;
             }
 
-            ExportService.ExportBorrowInfo(borrowRecords);
+            await ExportService.ExportBorrowInfo(borrowRecords);
             Snackbar.Add("Export thành công!", Severity.Success, (cfg) =>
             {
                 cfg.RequireInteraction = false;

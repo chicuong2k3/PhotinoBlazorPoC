@@ -1,11 +1,20 @@
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using TowelBorrowing.Data;
 using TowelBorrowing.Data.Models;
 
 namespace TowelBorrowing.Services.Impls;
 
 internal class ExportService : IExportService
 {
-	public void ExportBorrowInfo(List<BorrowRecord> borrowRecords)
+	private readonly AppDbContext _dbContext;
+
+	public ExportService(AppDbContext dbContext)
+	{
+		_dbContext = dbContext;
+	}
+	public async Task ExportBorrowInfo(List<BorrowRecord> borrowRecords)
 	{
 		using var workbook = new XLWorkbook();
 		var ws = workbook.Worksheets.Add($"Export_{DateTime.Now.Date.ToString("dd-MM-yyyy")}");
@@ -46,8 +55,16 @@ internal class ExportService : IExportService
 		ws.Columns().AdjustToContents();
 
 		var fileName = $"BorrowInfo_{DateTime.Now:dd-MM-yyyy_HH-mm-ss}.xlsx";
+
+		var folderName = (await _dbContext.AppSettings
+							.FirstOrDefaultAsync(x => x.Key == Constants.ExportFolderName))?.Value;
+		var folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), folderName ?? "MuonKhanExport");
+
+		if (!Directory.Exists(folderPath))
+			Directory.CreateDirectory(folderPath);
+
 		var filePath = Path.Combine(
-			Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+			folderPath,
 			fileName
 		);
 

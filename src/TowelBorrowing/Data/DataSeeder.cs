@@ -46,6 +46,7 @@ public static class DataSeeder
 			dbContext.AppSettings.Add(new AppSetting(Constants.OcrApiKey, "my-secret-api-key"));
 			dbContext.AppSettings.Add(new AppSetting(Constants.OcrApiUrl, "http://localhost:10000"));
 			dbContext.AppSettings.Add(new AppSetting(Constants.RoomManagementAppName, "Photos"));
+			dbContext.AppSettings.Add(new AppSetting(Constants.ExportFolderName, "MuonKhanExport"));
 			dbContext.SaveChanges();
 		}
  	}
