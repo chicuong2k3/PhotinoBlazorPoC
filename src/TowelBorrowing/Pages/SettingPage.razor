@@ -1,0 +1,85 @@
+@page "/settings"
+
+@inject NavigationManager NavigationManager
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+
+<MudStack>
+    <MudGrid>
+        @foreach (var pair in _keyValuePairs)
+        {
+            <MudItem sm="6">
+                <MudTextField Value="@pair.Key" ReadOnly
+                              Immediate Style="width: 100%" ShrinkLabel
+                              Margin="Margin.Dense" Variant="Variant.Outlined" Label="Key" />
+            </MudItem>
+            <MudItem sm="6">
+                <MudTextField Value="@pair.Value"
+                              Immediate Style="width: 100%" ShrinkLabel
+                              Margin="Margin.Dense" Variant="Variant.Outlined" Label="Value" />
+            </MudItem>
+        }
+    </MudGrid>
+    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth
+               OnClick="SaveChanges"
+               Ripple="false" DropShadow="false">
+        Lưu Thay Đổi
+    </HUIButton>
+    <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" FullWidth
+               OnClick="@(() => NavigationManager.NavigateTo("/"))"
+               Ripple="false" DropShadow="false">
+        Trở Về
+    </HUIButton>
+</MudStack>
+
+@code {
+    private Dictionary<string, string> _keyValuePairs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _keyValuePairs = DbContext.AppSettings.ToDictionary(p => p.Key, p => p.Value);
+
+    }
+
+    private void Reset()
+    {
+        _keyValuePairs = DbContext.AppSettings.ToDictionary(p => p.Key, p => p.Value);
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            foreach (var pair in _keyValuePairs)
+            {
+                var setting = await DbContext.AppSettings
+                                .FirstOrDefaultAsync(x => x.Key == pair.Key);
+
+                if (setting == null) continue;
+
+                setting.Value = pair.Value;
+            }
+
+            await DbContext.SaveChangesAsync();
+
+            NavigationManager.NavigateTo("/");
+
+            Snackbar.Add("Đã lưu thay đổi", Severity.Success, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        catch (Exception)
+        {
+            Snackbar.Add($"Có lỗi xảy ra! Thử lại sau!", Severity.Error, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+
+
+
+    }
+}

@@ -16,7 +16,7 @@
                Ripple="false" DropShadow="false">
             Quét Phòng
         </HUIButton>
-        <HUIButton OnClick="OpenFindVilla" Style="width: 100%"
+        <HUIButton  OnClick="OpenFindVilla" Style="width: 100%" 
                    Color="Color.Primary" Variant="Variant.Filled" 
                    Ripple="false" DropShadow="false">
             Villa
@@ -38,6 +38,13 @@
                OnClick="ExportExcel" 
                Ripple="false" DropShadow="false">
         Xuất Excel Cuối Ngày
+    </HUIButton>
+
+    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth
+               StartIcon="@Icons.Material.Filled.Settings"
+               OnClick="@(() => NavigationManager.NavigateTo("/settings"))"
+               Ripple="false" DropShadow="false">
+        Cấu Hình
     </HUIButton>
 </MudStack>
 
