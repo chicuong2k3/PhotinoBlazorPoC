@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TowelBorrowing.Data;
 
@@ -10,9 +11,11 @@ using TowelBorrowing.Data;
 namespace TowelBorrowing.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251123064437_UpdateDb2")]
+    partial class UpdateDb2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -43,7 +46,7 @@ namespace TowelBorrowing.Data.Migrations
 
                     b.HasIndex("GuestCardNumber");
 
-                    b.ToTable("BorrowRecords", (string)null);
+                    b.ToTable("BorrowRecords");
                 });
 
             modelBuilder.Entity("TowelBorrowing.Data.Models.GuestCard", b =>
@@ -74,7 +77,7 @@ namespace TowelBorrowing.Data.Migrations
 
                     b.HasKey("CardNumber");
 
-                    b.ToTable("GuestCards", (string)null);
+                    b.ToTable("GuestCards");
                 });
 
             modelBuilder.Entity("TowelBorrowing.Data.Models.MaxClientMonitor", b =>
@@ -100,7 +103,7 @@ namespace TowelBorrowing.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MaxClientMonitors", (string)null);
+                    b.ToTable("MaxClientMonitors");
                 });
 
             modelBuilder.Entity("TowelBorrowing.Data.Models.BorrowRecord", b =>

@@ -11,7 +11,6 @@ public class BorrowRecord
 	public int BorrowQuantity { get; private set; }
 	public int ReturnQuantity { get; private set; }
 	public DateTime CreatedAt { get; private set; }
-	public GuestCardOcrStatus Status { get; set; }
 
 	private BorrowRecord() { }
 	public BorrowRecord(string guestCardNumber)
@@ -20,7 +19,6 @@ public class BorrowRecord
 		BorrowQuantity = 0;
 		ReturnQuantity = 0;
 		CreatedAt = DateTime.Now;
-		Status = GuestCardOcrStatus.Processed;
 	}
 
 	public Result Borrow(int quantity)

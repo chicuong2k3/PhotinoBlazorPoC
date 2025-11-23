@@ -11,9 +11,12 @@
         <MudText>
             TÒA: @_card?.Building
         </MudText>
-        <MudText>
-            TẦNG: @_card?.Floor
-        </MudText>
+        @if (_card?.Floor != null)
+        {
+            <MudText>
+                TẦNG: @_card.Floor
+            </MudText>
+        }
     </MudStack>
     <MudText Typo="Typo.h2">
         PHÒNG: @_card?.RoomNo
@@ -40,42 +43,37 @@
             </MudAlert>
         </MudItem>
         <MudItem sm="6">
-            <MudInput @bind-Value="@_borrowCount" Disabled="@(!_borrowEnabled)" Immediate Style="width: 100%"
+            <MudTextField @bind-Value="@_borrowCount" Immediate
+                          Style="width: 100%" ShrinkLabel
                       Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng mượn" />
 
             
         </MudItem>
         <MudItem sm="6">
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
-                       OnClick="@(() => _borrowEnabled = !_borrowEnabled)"
+                       OnClick="@(() => Submit("borrow"))"
                        Ripple="false" DropShadow="false">
                 Mượn
             </HUIButton>
         </MudItem>
 
         <MudItem sm="6">
-            <MudInput @bind-Value="@_returnCount" Disabled="@(!_returnEnabled)" Immediate Style="width: 100%"
+            <MudTextField @bind-Value="@_returnCount"
+                          Immediate Style="width: 100%" ShrinkLabel
                       Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng trả" />
         </MudItem>
         <MudItem sm="6">
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
-                       OnClick="@(() => _returnEnabled = !_returnEnabled)"
+                       OnClick="@(() => Submit("return"))"
                        Ripple="false" DropShadow="false">
                 Trả
             </HUIButton>
         </MudItem>
-        <MudItem sm="6">
+        <MudItem sm="12">
             <HUIButton Color="Color.Secondary" Variant="Variant.Filled" Style="width: 100%"
                        OnClick="@(() => NavigationManager.NavigateTo("/"))"
                        Ripple="false" DropShadow="false">
                 Thoát
-            </HUIButton>
-        </MudItem>
-        <MudItem sm="6">
-            <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
-                OnClick="Submit" Disabled="@(_borrowCount <= 0 && _returnCount <= 0)"
-                       Ripple="false" DropShadow="false">
-                Xác nhận
             </HUIButton>
         </MudItem>
     </MudGrid>
@@ -98,8 +96,6 @@
     private GuestCard? _card;
     private int _borrowCount = 0;
     private int _returnCount = 0;
-    private bool _borrowEnabled = false;
-    private bool _returnEnabled = false;
 
     private int _maxBorrow;
     private int _borrowedCount;
@@ -107,28 +103,27 @@
     private int RemainCount => _maxBorrow - _borrowedCount;
     private string? _errMsg = null;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _card = DbContext.GuestCards
-            .Where(x => x.CardNumber == CardNumber)
-            .FirstOrDefault();
+        _card = await DbContext.GuestCards
+            .FirstOrDefaultAsync(x => x.CardNumber == CardNumber);
 
         if (_card == null) return;
 
-        var maxClientMonitor = DbContext.MaxClientMonitors
-                .Where(x => x.RoomNo == _card.RoomNo
+        var maxClientMonitor = await DbContext.MaxClientMonitors
+                .FirstOrDefaultAsync(x => x.RoomNo == _card.RoomNo
                     && x.Building == _card.Building
-                    && x.Date.Date == DateTime.Now.Date)
-                .FirstOrDefault();
+                    && x.Date.Date == DateTime.Now.Date);
         if (maxClientMonitor != null)
         {
             _maxBorrow = maxClientMonitor.MaxQuantity;
         }
 
-        var borrowRecord = DbContext.BorrowRecords
-            .Where(x => x.GuestCardNumber == _card.CardNumber
-                    && x.CreatedAt.Date == DateTime.Now.Date)
-                .FirstOrDefault();
+        var borrowRecord = await DbContext.BorrowRecords
+            .Include(x => x.GuestCard)
+            .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
+                    && x.CreatedAt.Date == DateTime.Now.Date);
+
         if (borrowRecord != null)
         {
             _borrowedCount = borrowRecord.BorrowQuantity;
@@ -136,26 +131,33 @@
         }
     }
 
-    private async Task Submit()
+    private async Task Submit(string action)
     {
         if (_card == null) return;
+        if (_borrowCount <= 0 || _returnCount <= 0)
+        {
+            _errMsg = "Số lượng không hợp lệ";
+            return;
+        }
 
         _errMsg = null;
 
         try
         {
-            var borrowRecord = DbContext.BorrowRecords
-                        .Where(x => x.GuestCardNumber == _card.CardNumber
-                           && x.CreatedAt.Date == DateTime.Now.Date)
-                        .FirstOrDefault();
+            var today = DateTime.Today;
+            var borrowRecord = await DbContext.BorrowRecords
+                        .Include(x => x.GuestCard)
+                        .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
+                           && x.CreatedAt.Date == today);
 
             if (borrowRecord == null)
             {
                 borrowRecord = new BorrowRecord(_card.CardNumber);
                 DbContext.BorrowRecords.Add(borrowRecord);
+                await DbContext.SaveChangesAsync();
             }
 
-            if (_borrowEnabled)
+            if (action == "borrow")
             {
                 var result = borrowRecord.Borrow(_borrowCount);
                 if (result.IsFailed)
@@ -163,9 +165,10 @@
                     _errMsg = result.Errors[0].Message;
                     return;
                 }
+                await DbContext.SaveChangesAsync();
             }
 
-            if (_returnEnabled)
+            if (action == "return")
             {
                 var result = borrowRecord.Return(_returnCount);
                 if (result.IsFailed)
@@ -173,16 +176,17 @@
                     _errMsg = result.Errors[0].Message;
                     return;
                 }
+                await DbContext.SaveChangesAsync();
             }
-
-            await DbContext.SaveChangesAsync();
-            NavigationManager.NavigateTo("/");
 
             Snackbar.Add($"Thao tác thành công!", Severity.Success, (cfg) =>
             {
                 cfg.RequireInteraction = false;
                 cfg.VisibleStateDuration = 800;
             });
+
+            _borrowedCount = borrowRecord.BorrowQuantity;
+            _returnedCount = borrowRecord.ReturnQuantity;
         }
         catch (Exception e)
         {

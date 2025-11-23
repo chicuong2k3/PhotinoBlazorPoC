@@ -14,10 +14,6 @@ internal class BorrowRecordConfiguration : IEntityTypeConfiguration<BorrowRecord
 			.IsRequired()
 			.HasMaxLength(100);
 
-		builder.Property(g => g.Status)
-			   .HasConversion<string>()
-			   .IsRequired();
-
 		builder.Property(g => g.CreatedAt)
 			   .HasDefaultValueSql("CURRENT_TIMESTAMP")
 			   .IsRequired();
@@ -26,6 +22,8 @@ internal class BorrowRecordConfiguration : IEntityTypeConfiguration<BorrowRecord
 		builder.HasOne(g => g.GuestCard)
 			   .WithMany(c => c.Logs)
 			   .HasForeignKey(g => g.GuestCardNumber)
+			   .HasPrincipalKey(g => g.CardNumber)
 			   .OnDelete(DeleteBehavior.Cascade);
+
 	}
 }

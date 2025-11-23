@@ -15,6 +15,7 @@ internal class ExportService : IExportService
 		ws.Cell(1, 3).Value = "Bldg";
 		ws.Cell(1, 4).Value = "Số mượn";
 		ws.Cell(1, 5).Value = "Số trả";
+		ws.Cell(1, 6).Value = "Còn thiếu";
 
 		ws.Range(1, 1, 1, 7).Style.Font.SetBold();
 
@@ -22,10 +23,14 @@ internal class ExportService : IExportService
 		int row = 2;
 		foreach (var r in borrowRecords)
 		{
+			if (r.BorrowQuantity - r.ReturnQuantity <= 0)
+				continue;
+
 			var building = r.GuestCard?.Building switch
 			{
 				"1" => "A",
 				"2" => "B",
+				"Villa" => "Villa",
 				_ => ""
 			};
 
@@ -34,15 +39,20 @@ internal class ExportService : IExportService
 			ws.Cell(row, 3).Value = building;
 			ws.Cell(row, 4).Value = r.BorrowQuantity;
 			ws.Cell(row, 5).Value = r.ReturnQuantity;
+			ws.Cell(row, 6).Value = r.BorrowQuantity - r.ReturnQuantity;
 			row++;
 		}
 
 		ws.Columns().AdjustToContents();
 
+		var fileName = $"BorrowInfo_{DateTime.Now:dd-MM-yyyy_HH-mm-ss}.xlsx";
 		var filePath = Path.Combine(
 			Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-			$"BorrowInfo_{DateTime.Now.ToString("dd-MM-yyyy")}.xlsx"
+			fileName
 		);
+
+		if (File.Exists(filePath))
+			File.Delete(filePath);
 
 		workbook.SaveAs(filePath);
 	}

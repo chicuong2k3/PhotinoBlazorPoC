@@ -54,9 +54,8 @@
         var cardOcrResult = await GuestCardService.ExtractGuestCardAsync();
         if (cardOcrResult.CardInfo != null && string.IsNullOrEmpty(cardOcrResult.ErrorMessage))
         {
-            var existingCard = DbContext.GuestCards
-                .Where(c => c.CardNumber == cardOcrResult.CardInfo.Card)
-                .FirstOrDefault();
+            var existingCard = await DbContext.GuestCards
+                .FirstOrDefaultAsync(c => c.CardNumber == cardOcrResult.CardInfo.Card);
 
             if (existingCard == null)
             {
@@ -140,10 +139,12 @@
         try
         {
             _isExporting = true;
+            StateHasChanged();
 
-            var borrowRecords = DbContext.BorrowRecords
+            var borrowRecords = await DbContext.BorrowRecords
+                    .Include(x => x.GuestCard)
                     .Where(x => x.CreatedAt.Date == DateTime.Now.Date)
-                    .ToList();
+                    .ToListAsync();
 
             if (!borrowRecords.Any())
             {
@@ -206,9 +207,9 @@
         if (dialogResult != null && !dialogResult.Canceled)
         {
             var villaRoomNo = (string)dialogResult.Data!;
-            var guestCard = DbContext.GuestCards
+            var guestCard = await DbContext.GuestCards
                         .Where(x => x.Building == "Villa" && x.RoomNo == villaRoomNo)
-                        .FirstOrDefault();
+                        .FirstOrDefaultAsync();
 
             if (guestCard != null)
             {
