@@ -51,7 +51,7 @@
     {
         _isScanning = true;
 
-        var cardOcrResult = await GuestCardService.ExtractGuestCardAsync();
+        var cardOcrResult = await GuestCardService.ExtractGuestCardAsync(1);
         if (cardOcrResult.CardInfo != null && string.IsNullOrEmpty(cardOcrResult.ErrorMessage))
         {
             var existingCard = await DbContext.GuestCards

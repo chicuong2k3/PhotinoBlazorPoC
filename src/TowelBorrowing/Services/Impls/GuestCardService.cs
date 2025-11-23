@@ -176,7 +176,7 @@ internal class GuestCardService : IGuestCardService
 		{
 			var ocrText = await _ocrService.RecognizeAsync(imagePath);
 			_logger.LogInformation("OCR Result:\n{OcrText}",	 ocrText);
-			return (string.Join("\n", ocrText), null);
+			return (ocrText, null);
 		}
 		catch (Exception)
 		{
