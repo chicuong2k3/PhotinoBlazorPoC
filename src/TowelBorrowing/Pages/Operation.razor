@@ -134,12 +134,7 @@
     private async Task Submit(string action)
     {
         if (_card == null) return;
-        if (_borrowCount <= 0 || _returnCount <= 0)
-        {
-            _errMsg = "Số lượng không hợp lệ";
-            return;
-        }
-
+        
         _errMsg = null;
 
         try

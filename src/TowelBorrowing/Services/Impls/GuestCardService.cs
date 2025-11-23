@@ -44,6 +44,13 @@ internal class GuestCardService : IGuestCardService
 			var result = await ExtractGuestCardFromImageAsync(imagePath);
 			if (string.IsNullOrEmpty(result.ErrorMessage))
 			{
+				try
+				{
+					File.Delete(imagePath);
+				}
+				catch (Exception)
+				{
+				}
 				return result;
 			}
 
