@@ -5,6 +5,7 @@ using SixLabors.ImageSharp;
 using System.Text.RegularExpressions;
 using TowelBorrowing.Data;
 using TowelBorrowing.Models;
+using FuzzySharp;
 
 namespace TowelBorrowing.Services.Impls;
 
@@ -93,82 +94,60 @@ internal class GuestCardService : IGuestCardService
 			return string.Empty;
 		}
 	}
+
 	private async Task<GuestCardOcrResult> ExtractGuestCardFromImageAsync(string imagePath)
 	{
 		var (text, errorMessage) = await ExtractTextFromImageAsync(imagePath);
-
 		if (string.IsNullOrWhiteSpace(text))
-		{
 			return new() { ErrorMessage = errorMessage };
-		}
 
 		var result = new GuestCardOcrResult();
 		result.CardInfo = new GuestCardOcrDto();
 
-		var textProcessed = text.Replace(" ", "").Replace(".", "").Replace(",", "").Replace(":", "").ToUpper();
+		var lines = text.Split('\n')
+						.Select(l => l.Trim())
+						.Where(l => !string.IsNullOrEmpty(l))
+						.ToList();
 
-		// Guest Card
-		var matchGuestCard = Regex.Match(textProcessed, @"\[GUESTCARD\](\d+)");
-		if (matchGuestCard.Success)
-			result.CardInfo.Card = matchGuestCard.Groups[1].Value;
-		else
-		{
-			result.ErrorMessage = "Thiếu Guest Card";
-			return result;
-		}
+		// --- Guest Card ---
+		result.CardInfo.Card = ExtractField(lines, new[] { "GUEST CARD", "[GUESTCARD]", "IGUESTCARD" }, 8)
+							   ?? throw new Exception("Không đọc được Guest Card");
 
-		// Holder Name
-		var matchHolder = Regex.Match(textProcessed, @"HOLDERNAME(\d{4})|HOLDERN(\d{4})");
-		if (matchHolder.Success)
-			result.CardInfo.HolderName = matchHolder.Groups[1].Success
-				? matchHolder.Groups[1].Value : matchHolder.Groups[2].Value;
-		else
-		{
-			result.ErrorMessage = "Thiếu Holder Name";
-			return result;
-		}
+		// --- Holder Name ---
+		result.CardInfo.HolderName = ExtractField(lines, new[] { "HOLDER NAME", "HOLDER", "HOLDERN" }, 4)
+									 ?? throw new Exception("Không đọc được Holder Name");
 
-		// Room
-		string? roomNo = null;
-		var matchRoom = Regex.Match(textProcessed, @"ROOMNO(\d{4})|ROOMS?(\d{4})");
-		if (matchRoom.Success)
-		{
-			roomNo = matchRoom.Groups[1].Success ?
-				matchRoom.Groups[1].Value : matchRoom.Groups[2].Value;
-			roomNo = roomNo.TrimStart('0');
-		}
-		else
-		{
-			result.ErrorMessage = "Thiếu Room Number";
-			return result;
-		}
+		// --- Room Number ---
+		result.CardInfo.RoomNo = ExtractField(lines, new[] { "ROOM NO", "ROOM", "RM" }, 4)
+								 ?? result.CardInfo.HolderName; // fallback nếu Room không có
 
-		if (string.IsNullOrEmpty(roomNo) && !string.IsNullOrEmpty(result.CardInfo.HolderName))
-			roomNo = result.CardInfo.HolderName;
+		result.CardInfo.Floor = result.CardInfo.RoomNo?[0].ToString();
 
-		if (string.IsNullOrEmpty(roomNo))
-		{
-			var allNumbers = Regex.Matches(textProcessed, @"\d{4}").Select(m => m.Value);
-			roomNo = allNumbers.FirstOrDefault(n => n[0] >= '1' && n[0] <= '9');
-		}
-
-		if (!string.IsNullOrEmpty(roomNo))
-		{
-			result.CardInfo.RoomNo = roomNo; result.CardInfo.Floor = roomNo[0].ToString();
-		}
-		string bldgNo = "1";
-		var matchBldg = Regex.Match(textProcessed, @"(BIDG|BLDG|BLD|TOA)(\d{1,2})");
-		if (matchBldg.Success)
-		{
-			bldgNo = matchBldg.Groups[2].Value.TrimStart('0');
-		}	
-		result.CardInfo.Building = bldgNo;
-
-		_logger.LogInformation("Extracted Guest Card Info: {@CardInfo}", result.CardInfo);
+		// --- Building ---
+		result.CardInfo.Building = ExtractField(lines, new[] { "BLDG", "BIDG", "BLD", "TOA" }, 2)?.TrimStart('0')
+								   ?? "1";
 
 		return result;
 	}
 
+	private string? ExtractField(IEnumerable<string> lines, string[] labels, int numberLength)
+	{
+		foreach (var line in lines)
+		{
+			foreach (var label in labels)
+			{
+				var idx = line.ToUpper().IndexOf(label.ToUpper());
+				if (idx >= 0)
+				{
+					var remainder = line.Substring(idx + label.Length);
+					var match = Regex.Match(remainder, @"\d{" + numberLength + "}");
+					if (match.Success)
+						return match.Value;
+				}
+			}
+		}
+		return null;
+	}
 	private async Task<(string text, string? errorMessage)> ExtractTextFromImageAsync(string imagePath)
 	{
 		if (!File.Exists(imagePath))
