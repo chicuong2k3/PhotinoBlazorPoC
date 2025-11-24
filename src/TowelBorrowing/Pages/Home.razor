@@ -66,6 +66,7 @@
 
             if (existingCard == null)
             {
+                _isScanning = false;
                 Snackbar.Add($"OCR ra phòng không hợp lệ. Vui lòng thử lại!", Severity.Error, (cfg) =>
                 {
                     cfg.RequireInteraction = false;
