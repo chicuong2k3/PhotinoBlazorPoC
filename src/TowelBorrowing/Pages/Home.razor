@@ -62,7 +62,7 @@
         if (cardOcrResult.CardInfo != null && string.IsNullOrEmpty(cardOcrResult.ErrorMessage))
         {
             var existingCard = await DbContext.GuestCards
-                .FirstOrDefaultAsync(c => c.CardNumber == cardOcrResult.CardInfo.Card);
+                .FirstOrDefaultAsync(c => c.RoomNo == cardOcrResult.CardInfo.RoomNo);
 
             if (existingCard == null)
             {

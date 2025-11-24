@@ -109,37 +109,14 @@ internal class GuestCardService : IGuestCardService
 						.Where(l => !string.IsNullOrEmpty(l))
 						.ToList();
 
-		// --- Guest Card ---
-		result.CardInfo.Card = ExtractField(lines, new[] { "GUEST CARD", "[GUESTCARD]", "IGUESTCARD" }, 8);
-		if (result.CardInfo.Card == null)
-		{
-			result.ErrorMessage = "Không đọc được Guest Card";
-			return result;
-		}
-
-		// --- Holder Name ---
-		result.CardInfo.HolderName = ExtractField(lines, new[] { "HOLDER NAME", "HOLDER", "HOLDERN" }, 4);
-		if (result.CardInfo.HolderName == null)
-		{
-			result.ErrorMessage = "Không đọc được Holder Name";
-			return result;
-		}
-
 		// --- Room Number ---
-		result.CardInfo.RoomNo = ExtractField(lines, new[] { "ROOM NO", "ROOM", "RM" }, 4)
-								 ?? result.CardInfo.HolderName; // fallback nếu Room không có
+		result.CardInfo.RoomNo = ExtractField(lines, new[] { "ROOM NO", "ROOM", "RM" }, 4)!;
 
-		if (result.CardInfo.RoomNo == null)
+		if (string.IsNullOrEmpty(result.CardInfo.RoomNo))
 		{
 			result.ErrorMessage = "Không đọc được Room No";
 			return result;
 		}
-
-		result.CardInfo.Floor = result.CardInfo.RoomNo?[0].ToString();
-
-		// --- Building ---
-		result.CardInfo.Building = ExtractField(lines, new[] { "BLDG", "BIDG", "BLD", "TOA" }, 2)?.TrimStart('0')
-								   ?? "1";
 
 		return result;
 	}
