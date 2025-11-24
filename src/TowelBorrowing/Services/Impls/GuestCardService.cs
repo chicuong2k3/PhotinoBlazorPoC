@@ -99,7 +99,7 @@ internal class GuestCardService : IGuestCardService
 	{
 		var (text, errorMessage) = await ExtractTextFromImageAsync(imagePath);
 		if (string.IsNullOrWhiteSpace(text))
-			return new() { ErrorMessage = errorMessage };
+			return new GuestCardOcrResult { ErrorMessage = errorMessage };
 
 		var result = new GuestCardOcrResult();
 		result.CardInfo = new GuestCardOcrDto();
@@ -110,16 +110,30 @@ internal class GuestCardService : IGuestCardService
 						.ToList();
 
 		// --- Guest Card ---
-		result.CardInfo.Card = ExtractField(lines, new[] { "GUEST CARD", "[GUESTCARD]", "IGUESTCARD" }, 8)
-							   ?? throw new Exception("Không đọc được Guest Card");
+		result.CardInfo.Card = ExtractField(lines, new[] { "GUEST CARD", "[GUESTCARD]", "IGUESTCARD" }, 8);
+		if (result.CardInfo.Card == null)
+		{
+			result.ErrorMessage = "Không đọc được Guest Card";
+			return result;
+		}
 
 		// --- Holder Name ---
-		result.CardInfo.HolderName = ExtractField(lines, new[] { "HOLDER NAME", "HOLDER", "HOLDERN" }, 4)
-									 ?? throw new Exception("Không đọc được Holder Name");
+		result.CardInfo.HolderName = ExtractField(lines, new[] { "HOLDER NAME", "HOLDER", "HOLDERN" }, 4);
+		if (result.CardInfo.HolderName == null)
+		{
+			result.ErrorMessage = "Không đọc được Holder Name";
+			return result;
+		}
 
 		// --- Room Number ---
 		result.CardInfo.RoomNo = ExtractField(lines, new[] { "ROOM NO", "ROOM", "RM" }, 4)
 								 ?? result.CardInfo.HolderName; // fallback nếu Room không có
+
+		if (result.CardInfo.RoomNo == null)
+		{
+			result.ErrorMessage = "Không đọc được Room No";
+			return result;
+		}
 
 		result.CardInfo.Floor = result.CardInfo.RoomNo?[0].ToString();
 
