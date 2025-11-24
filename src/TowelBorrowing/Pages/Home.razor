@@ -16,10 +16,10 @@
                Ripple="false" DropShadow="false">
             Quét Phòng
         </HUIButton>
-        <HUIButton  OnClick="OpenFindVilla" Style="width: 100%" 
+        <HUIButton OnClick="OpenFindManually" Style="width: 100%"
                    Color="Color.Primary" Variant="Variant.Filled" 
                    Ripple="false" DropShadow="false">
-            Villa
+            Nhập Phòng Thủ Công
         </HUIButton>
     </MudStack>
 
@@ -142,7 +142,7 @@
             _isImporting = false;
         }
 
-        
+
     }
 
     private async Task ExportExcel()
@@ -205,7 +205,7 @@
         return null;
     }
 
-    private async Task OpenFindVilla()
+    private async Task OpenFindManually()
     {
         var parameters = new DialogParameters<VillaInputDialog>();
         var options = new DialogOptions
@@ -217,9 +217,11 @@
 
         if (dialogResult != null && !dialogResult.Canceled)
         {
-            var villaRoomNo = (string)dialogResult.Data!;
+            var data = (ReturnDataForManualInput)dialogResult.Data!;
+            var roomNo = data.RoomNo;
+            var building = data.Building;
             var guestCard = await DbContext.GuestCards
-                        .Where(x => x.Building == "Villa" && x.RoomNo == villaRoomNo)
+                        .Where(x => x.Building == building && x.RoomNo == roomNo)
                         .FirstOrDefaultAsync();
 
             if (guestCard != null)

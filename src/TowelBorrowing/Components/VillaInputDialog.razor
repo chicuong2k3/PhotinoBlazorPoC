@@ -2,8 +2,17 @@
 
 <HUIDialog OnCancelClick="HandleCancelClick">
     <DialogContent>
-        <MudTextField @bind-Value="@_villaRoomNo" Immediate Style="width: 100%" ShrinkLabel
-                      Margin="Margin.Dense" Variant="Variant.Outlined" Label="Villa Room No" />
+        <MudStack>
+            <MudTextField @bind-Value="@_roomNo" Immediate Style="width: 100%" ShrinkLabel
+                          Margin="Margin.Dense" Variant="Variant.Outlined" Label="Room No" />
+            <MudSelect @bind-Value="@_building" Immediate Style="width: 100%" ShrinkLabel
+                       Margin="Margin.Dense" Variant="Variant.Outlined" Label="Building">
+                @foreach (var building in _buildings)
+                {
+                    <MudSelectItem Value="@building.Value">@building.Display</MudSelectItem>
+                }
+            </MudSelect>
+        </MudStack>
     </DialogContent>
     <DialogActions>
         <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" OnClick="HandleCancelClick"
@@ -20,8 +29,14 @@
 @code {
 
     [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
-    private string _villaRoomNo = string.Empty;
+    private string _roomNo = string.Empty;
+    private string _building = string.Empty;
     private bool _isScanning = false;
+    private List<BuildingItem> _buildings = [
+        new BuildingItem() { Value = "1", Display = "A" },
+        new BuildingItem() { Value = "2", Display = "B" },
+        new BuildingItem() { Value = "Villa", Display = "Villa" }
+    ];
 
     private void HandleCancelClick()
     {
@@ -30,14 +45,26 @@
 
     private void HandleConfirmClick()
     {
-        if (int.TryParse(_villaRoomNo, out var parsedNo))
+        if (int.TryParse(_roomNo, out var parsedNo))
         {
-            MudDialog?.Close(DialogResult.Ok(_villaRoomNo));
+            MudDialog?.Close(DialogResult.Ok(new ReturnDataForManualInput()
+            {
+                RoomNo = _roomNo,
+                Building = _building
+            }));
         }
         else
         {
-            
+
         }
 
     }
+
+    public class BuildingItem
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Display { get; set; } = string.Empty;
+    }
+
+    
 }
