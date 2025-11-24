@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using System.Text.RegularExpressions;
+using TowelBorrowing.Data;
 using TowelBorrowing.Models;
 
 namespace TowelBorrowing.Services.Impls;
@@ -12,17 +14,20 @@ internal class GuestCardService : IGuestCardService
 	private readonly IScreenService _screenService;
 	private readonly IConfiguration _configuration;
 	private readonly IOcrService _ocrService;
+	private readonly AppDbContext _dbContext;
 
 	public GuestCardService(
 		ILogger<GuestCardService> logger,
 		IScreenService screenService,
 		IConfiguration configuration,
-		IOcrService ocrService)
+		IOcrService ocrService,
+		AppDbContext dbContext)
 	{
 		_logger = logger;
 		_screenService = screenService;
 		_configuration = configuration;
 		_ocrService = ocrService;
+		_dbContext = dbContext;
 	}
 
 	public async Task<GuestCardOcrResult> ExtractGuestCardAsync(int maxRetries = 3)
@@ -75,8 +80,8 @@ internal class GuestCardService : IGuestCardService
 			if (!Directory.Exists(dirName))
 				Directory.CreateDirectory(dirName);
 
-			var mainAppProcess = _configuration["MainAppProcessName"] ??
-				throw new InvalidOperationException("MainAppProcessName is not configured.");
+			var mainAppProcess = (await _dbContext.AppSettings
+				.FirstOrDefaultAsync(x => x.Key == Constants.RoomManagementAppName))?.Value ?? ""; 
 			var screen = CaptureAroundCenter(mainAppProcess, width, height);
 			var imagePath = Path.Combine(dirName, $"screenshot_{Guid.NewGuid().ToString()}.png");
 			await File.WriteAllBytesAsync(imagePath, screen);
