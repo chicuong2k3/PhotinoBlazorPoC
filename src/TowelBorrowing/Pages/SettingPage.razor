@@ -15,6 +15,7 @@
             </MudItem>
             <MudItem sm="6">
                 <MudTextField Value="@pair.Value"
+                              ValueChanged="@(async (string value) => await HandleValueChanged(pair.Key, value))"
                               Immediate Style="width: 100%" ShrinkLabel
                               Margin="Margin.Dense" Variant="Variant.Outlined" Label="Value" />
             </MudItem>
@@ -38,7 +39,6 @@
     protected override async Task OnInitializedAsync()
     {
         _keyValuePairs = DbContext.AppSettings.ToDictionary(p => p.Key, p => p.Value);
-
     }
 
     private void Reset()
@@ -78,8 +78,11 @@
                 cfg.VisibleStateDuration = 800;
             });
         }
+    }
 
-
-
+    private async Task HandleValueChanged(string key, string value)
+    {
+        _keyValuePairs[key] = value;
+        await InvokeAsync(StateHasChanged);
     }
 }
