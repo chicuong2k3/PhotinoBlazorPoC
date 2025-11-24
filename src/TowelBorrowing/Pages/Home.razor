@@ -66,19 +66,14 @@
 
             if (existingCard == null)
             {
-                existingCard = new GuestCard()
+                Snackbar.Add($"OCR ra phòng không hợp lệ. Vui lòng thử lại!", Severity.Error, (cfg) =>
                 {
-                    CardNumber = cardOcrResult.CardInfo.Card,
-                    HolderName = cardOcrResult.CardInfo.HolderName,
-                    Building = cardOcrResult.CardInfo.Building,
-                    Floor = cardOcrResult.CardInfo.Floor,
-                    RoomNo = cardOcrResult.CardInfo.RoomNo
-                };
-
-                DbContext.GuestCards.Add(existingCard);
-                await DbContext.SaveChangesAsync();
-
+                    cfg.RequireInteraction = false;
+                    cfg.VisibleStateDuration = 800;
+                });
+                return;
             }
+
             NavigationManager.NavigateTo($"/operation/{existingCard.CardNumber}");
         }
         else
