@@ -32,9 +32,6 @@ internal class ExportService : IExportService
 		int row = 2;
 		foreach (var r in borrowRecords)
 		{
-			if (r.BorrowQuantity - r.ReturnQuantity <= 0)
-				continue;
-
 			var building = r.GuestCard?.Building switch
 			{
 				"1" => "A",
