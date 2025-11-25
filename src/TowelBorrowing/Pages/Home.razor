@@ -63,7 +63,7 @@
         {
             var existingCard = await DbContext.GuestCards
                 .FirstOrDefaultAsync(c => c.RoomNo == cardOcrResult.CardInfo.RoomNo
-                    && c.Building == cardOcrResult.CardInfo.Building);
+                    && c.Building == NormalizeBuilding(cardOcrResult.CardInfo.Building));
 
             if (existingCard == null)
             {
@@ -88,6 +88,14 @@
         }
 
         _isScanning = false;
+    }
+
+    private string NormalizeBuilding(string raw)
+    {
+        if (raw == "01") return "1";
+        if (raw == "02") return "2";
+
+        return raw;
     }
 
     private async Task ImportMaxTowel(IBrowserFile file)
