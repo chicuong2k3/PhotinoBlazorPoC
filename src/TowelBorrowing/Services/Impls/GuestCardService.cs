@@ -118,6 +118,13 @@ internal class GuestCardService : IGuestCardService
 			return result;
 		}
 
+		result.CardInfo.Building = ExtractField(
+			lines,
+			new[] { "BLDG", "BLDG.", "BLDG:", "BUILDING" },
+			2
+		)!;
+
+
 		return result;
 	}
 
