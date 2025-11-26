@@ -11,12 +11,12 @@
 
 <MudStack>
     <MudStack Row>
-        <HUIButton OnClick="ScanCard" Style="width: 100%"
+        <HUIButton OnClick="ScanCard" Style="width: 100%" Size="Size.Small"
                Color="Color.Primary" Variant="Variant.Filled" Loading="@_isScanning"
                Ripple="false" DropShadow="false">
             Quét Phòng
         </HUIButton>
-        <HUIButton OnClick="OpenFindManually" Style="width: 100%"
+        <HUIButton OnClick="OpenFindManually" Style="width: 100%" Size="Size.Small"
                    Color="Color.Primary" Variant="Variant.Filled" 
                    Ripple="false" DropShadow="false">
             Nhập Phòng Thủ Công
@@ -25,22 +25,24 @@
 
     <MudFileUpload T="IBrowserFile" FilesChanged="ImportMaxTowel" Style="width: 100%">
         <ActivatorContent>
-            <HUIButton Variant="Variant.Filled" Loading="@_isImporting" Style="width: 100%"
+            <HUIButton Variant="Variant.Filled" Loading="@_isImporting"
+            Size="Size.Small" Style="width: 100%"
                        Color="Color.Primary" Ripple="false" DropShadow="false"
                        StartIcon="@Icons.Material.Filled.ImportExport">
-                Nhập Số Lượng Khăn Tối Đa Mỗi Ngày  
+                Cập Nhật Số Lượng Khách Trong Ngày 
             </HUIButton>
         </ActivatorContent>
     </MudFileUpload>
 
-    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Loading="@_isExporting"
+    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
+    Loading="@_isExporting"
                StartIcon="@Icons.Material.Filled.ImportExport"
                OnClick="ExportExcel" 
                Ripple="false" DropShadow="false">
         Xuất Excel Cuối Ngày
     </HUIButton>
 
-    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth
+    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
                StartIcon="@Icons.Material.Filled.Settings"
                OnClick="@(() => NavigationManager.NavigateTo("/settings"))"
                Ripple="false" DropShadow="false">
@@ -112,25 +114,48 @@
 
             foreach (var row in rows)
             {
-                var roomNoStr = row[0];
-                var buildingStr = row[1];
-                var maxStr = row[2];
+                var roomNoBuildingStr = row[0];
+                var maxStr = row[1];
+
+                var buildingStr = roomNoBuildingStr.Substring(0, 1);
+                var roomNoStr = roomNoBuildingStr.Substring(1);
+
+                if (buildingStr == "A")
+                    buildingStr = "1";
+                else if (buildingStr == "B")
+                    buildingStr = "2";
+                else if (buildingStr != "Villa")
+                    continue;
 
                 if (!int.TryParse(roomNoStr, out int roomNo) ||
-                    (!int.TryParse(buildingStr, out int building) && buildingStr != "Villa") ||
                 !int.TryParse(maxStr, out int max))
                 {
                     continue;
                 }
 
                 var date = GetFileDate(Path.GetFileNameWithoutExtension(file.Name));
-                if (date == null) return;
+                if (date == null)
+                {
+                    Snackbar.Add("Tên file không hợp lệ. Phải là Import_dd-MM-yyyy", Severity.Error, (cfg) =>
+                    {
+                        cfg.RequireInteraction = false;
+                        cfg.VisibleStateDuration = 800;
+                    });
+                    return;
+                }
+
+                var existingMaxClientMonitor = await
+                    DbContext.MaxClientMonitors.FirstOrDefaultAsync(x => x.Building == buildingStr
+                    && x.RoomNo == roomNoStr && date.Value.Date == x.Date.Date);
+                if (existingMaxClientMonitor != null)
+                    continue;
 
                 var maxClientMonitor = new MaxClientMonitor(buildingStr, roomNoStr, max, date.Value);
                 DbContext.MaxClientMonitors.Add(maxClientMonitor);
-                await DbContext.SaveChangesAsync();
 
             }
+
+            await DbContext.SaveChangesAsync();
 
             Snackbar.Add("Thao tác thành công!", Severity.Success, (cfg) =>
             {

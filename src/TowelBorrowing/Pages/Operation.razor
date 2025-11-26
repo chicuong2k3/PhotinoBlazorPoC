@@ -7,83 +7,81 @@
 @inject ILogger<Operation> Logger
 
 <MudStack Spacing="2"> 
-    <MudStack Row>
-        <MudText>
-            TÒA: @_card?.Building
-        </MudText>
-        @if (_card?.Floor != null)
-        {
+    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudStack Row AlignItems="AlignItems.Center">
             <MudText>
-                TẦNG: @_card.Floor
+                TÒA: @GetBuilding(_card?.Building)
             </MudText>
-        }
+            @if (_card?.Floor != null)
+            {
+                <MudText>
+                    TẦNG: @_card.Floor
+                </MudText>
+            }
+        </MudStack>
+        <MudText Typo="Typo.h6">
+            PHÒNG: @_card?.RoomNo
+        </MudText>
     </MudStack>
-    <MudText Typo="Typo.h2">
-        PHÒNG: @_card?.RoomNo
-    </MudText>
 
     <MudStack Row>
-        <MudText Typo="Typo.subtitle2" Color="Color.Info">Đã mượn: @_borrowedCount</MudText>
-        <MudText Typo="Typo.subtitle2">Đã trả: @_returnedCount</MudText>
+        <MudText Typo="Typo.subtitle2" Color="Color.Error">Đã mượn: @_borrowedCount</MudText>
+        <MudText Typo="Typo.subtitle2" Color="Color.Error">Đã trả: @_returnedCount</MudText>
         <MudText Typo="Typo.subtitle2" Color="Color.Error">Còn thiếu: @(_borrowedCount - _returnedCount)</MudText>
     </MudStack>
 
     <MudGrid Spacing="2">
-        <MudItem sm="12">
-            <MudAlert Severity="Severity.Warning">
-                Bạn chỉ đặt tối đa @_maxBorrow <br />
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Warning" Style="width: 100%" NoIcon Dense>
+                Số lượng người trong phòng: @_maxBorrow <br />
                 @if (RemainCount > 0)
                 {
                     <p>Còn đặt được @RemainCount</p>
                 }
                 else
                 {
-                    <p>Bạn đã đặt nhiều hơn số lượng tối đa</p>
+                    <p>Vượt số lượng người trong phòng</p>
                 }
             </MudAlert>
         </MudItem>
-        <MudItem sm="6">
-            <MudTextField @bind-Value="@_borrowCount" Immediate
+        <MudItem xs="6">
+            <MudTextField @bind-Value="@_borrowCount" Immediate 
                           Style="width: 100%" ShrinkLabel
                       Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng mượn" />
 
             
         </MudItem>
-        <MudItem sm="6">
+        <MudItem xs="6">
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
+                       Size="Size.Small"
                        OnClick="@(() => Submit("borrow"))"
                        Ripple="false" DropShadow="false">
                 Mượn
             </HUIButton>
         </MudItem>
 
-        <MudItem sm="6">
-            <MudTextField @bind-Value="@_returnCount"
-                          Immediate Style="width: 100%" ShrinkLabel
+        <MudItem xs="6">
+            <MudTextField @bind-Value="@_returnCount" 
+                          Immediate Style="width: 100%" ShrinkLabel 
                       Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng trả" />
         </MudItem>
-        <MudItem sm="6">
+        <MudItem xs="6">
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
+                       Size="Size.Small"
                        OnClick="@(() => Submit("return"))"
                        Ripple="false" DropShadow="false">
                 Trả
             </HUIButton>
         </MudItem>
-        <MudItem sm="12">
+        <MudItem xs="12">
             <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" Style="width: 100%"
+                       Size="Size.Small"
                        OnClick="@(() => NavigationManager.NavigateTo("/"))"
                        Ripple="false" DropShadow="false">
                 Thoát
             </HUIButton>
         </MudItem>
     </MudGrid>
-
-    @if (!string.IsNullOrEmpty(_errMsg))
-    {
-        <MudAlert Severity="Severity.Error">
-            @_errMsg
-        </MudAlert>
-    }
 </MudStack>
 
 
@@ -101,7 +99,6 @@
     private int _borrowedCount;
     private int _returnedCount;
     private int RemainCount => _maxBorrow - _borrowedCount;
-    private string? _errMsg = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,8 +131,6 @@
     private async Task Submit(string action)
     {
         if (_card == null) return;
-        
-        _errMsg = null;
 
         try
         {
@@ -157,7 +152,11 @@
                 var result = borrowRecord.Borrow(_borrowCount);
                 if (result.IsFailed)
                 {
-                    _errMsg = result.Errors[0].Message;
+                    Snackbar.Add(result.Errors[0].Message, Severity.Error, (cfg) =>
+                    {
+                        cfg.RequireInteraction = false;
+                        cfg.VisibleStateDuration = 800;
+                    });
                     return;
                 }
                 await DbContext.SaveChangesAsync();
@@ -168,7 +167,11 @@
                 var result = borrowRecord.Return(_returnCount);
                 if (result.IsFailed)
                 {
-                    _errMsg = result.Errors[0].Message;
+                    Snackbar.Add(result.Errors[0].Message, Severity.Error, (cfg) =>
+                    {
+                        cfg.RequireInteraction = false;
+                        cfg.VisibleStateDuration = 800;
+                    });
                     return;
                 }
                 await DbContext.SaveChangesAsync();
@@ -192,5 +195,13 @@
                 cfg.VisibleStateDuration = 800;
             });
         }
+    }
+
+    private string? GetBuilding(string? raw)
+    {
+        if (raw == "1") return "A";
+        if (raw == "2") return "B";
+
+        return raw;
     }
 }

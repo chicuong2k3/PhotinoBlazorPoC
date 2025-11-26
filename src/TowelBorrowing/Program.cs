@@ -73,7 +73,7 @@ public class Program
 			}
 
 			app.MainWindow
-			.SetSize(1000, 700)
+			.SetSize(640, 480)
 			.SetDevToolsEnabled(true)
 			.SetLogVerbosity(0)
 			.SetResizable(false)

@@ -3,16 +3,16 @@
 <HUIDialog OnCancelClick="HandleCancelClick">
     <DialogContent>
         <MudStack Style="padding: 8px">
-            <MudText Typo="Typo.body1">Bạn có chắc chắn muốn đóng ứng dụng không?</MudText>
+            <MudText Typo="Typo.body2">Bạn có chắc chắn muốn đóng ứng dụng không?</MudText>
         </MudStack>
     </DialogContent>
     <DialogActions>
         <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" OnClick="HandleCancelClick" Style="width: 100%"
-                   Ripple="false" DropShadow="false">
+               Size="Size.Small" Ripple="false" DropShadow="false">
             Không
         </HUIButton>
         <HUIButton Variant="Variant.Filled" Color="Color.Primary" Style="width: 100%"
-        OnClick="HandleConfirmClick"
+                   OnClick="HandleConfirmClick" Size="Size.Small"
                    Ripple="false" DropShadow="false">
             Có
         </HUIButton>

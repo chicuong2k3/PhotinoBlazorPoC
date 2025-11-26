@@ -10,16 +10,14 @@
 <MudSnackbarProvider />
 
 
-<CustomWindow Title="Mượn Khăn" Maximized="false" HeaderHeight="40" @ref="@_customWindow"
+<CustomWindow Title="" Maximized="false" HeaderHeight="34" @ref="@_customWindow"
               MaximizeOnHeaderDoubleClick="false" Resizable="false"
               
     WindowClosingCallback="OnClosing">
     <WindowContent>
-        <MudMainContent>
-            <MudContainer Class="px-8">
-                @Body
-            </MudContainer>
-        </MudMainContent>
+        <div style="padding: 16px 24px">
+            @Body
+        </div>
     </WindowContent>
 </CustomWindow>
 

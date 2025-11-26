@@ -4,33 +4,35 @@
 @inject AppDbContext DbContext
 @inject ISnackbar Snackbar
 
-<MudStack>
-    <MudGrid>
+<MudStack Spacing="3">
+    <MudGrid Spacing="2" Justify="Justify.SpaceBetween">
         @foreach (var pair in _keyValuePairs)
         {
             <MudItem sm="6">
-                <MudTextField Value="@pair.Key" ReadOnly
+                <MudTextField Value="@pair.Key" ReadOnly Typo="Typo.button"
                               Immediate Style="width: 100%" ShrinkLabel
                               Margin="Margin.Dense" Variant="Variant.Outlined" Label="Key" />
             </MudItem>
             <MudItem sm="6">
-                <MudTextField Value="@pair.Value"
+                <MudTextField Value="@pair.Value" Typo="Typo.button"
                               ValueChanged="@(async (string value) => await HandleValueChanged(pair.Key, value))"
                               Immediate Style="width: 100%" ShrinkLabel
                               Margin="Margin.Dense" Variant="Variant.Outlined" Label="Value" />
             </MudItem>
         }
     </MudGrid>
-    <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth
-               OnClick="SaveChanges"
-               Ripple="false" DropShadow="false">
-        Lưu Thay Đổi
-    </HUIButton>
-    <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" FullWidth
-               OnClick="@(() => NavigationManager.NavigateTo("/"))"
-               Ripple="false" DropShadow="false">
-        Trở Về
-    </HUIButton>
+    <MudStack Spacing="2">
+        <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth
+                   OnClick="SaveChanges" Size="Size.Small"
+                   Ripple="false" DropShadow="false">
+            Lưu Thay Đổi
+        </HUIButton>
+        <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" FullWidth
+                   OnClick="@(() => NavigationManager.NavigateTo("/"))" Size="Size.Small"
+                   Ripple="false" DropShadow="false">
+            Trở Về
+        </HUIButton>
+    </MudStack>
 </MudStack>
 
 @code {
