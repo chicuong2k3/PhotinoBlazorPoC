@@ -83,7 +83,13 @@ internal class GuestCardService : IGuestCardService
 
 			var mainAppProcess = (await _dbContext.AppSettings
 				.FirstOrDefaultAsync(x => x.Key == Constants.RoomManagementAppName))?.Value ?? ""; 
-			var screen = CaptureAroundCenter(mainAppProcess, width, height);
+
+			var screen = _screenService.CaptureMessageBox(mainAppProcess);
+			if (screen == null || screen.Length == 0)
+			{
+				_logger.LogError("Failed to capture message box for process {Process}", mainAppProcess);
+				return string.Empty;
+			}
 			var imagePath = Path.Combine(dirName, $"screenshot_{Guid.NewGuid().ToString()}.png");
 			await File.WriteAllBytesAsync(imagePath, screen);
 			return imagePath;
@@ -167,21 +173,21 @@ internal class GuestCardService : IGuestCardService
 		}
 	}
 
-	private byte[] CaptureAroundCenter(string processName, int width, int height)
-	{
-		var center = _screenService.GetMessageBoxCenter(processName);
-		if (center == null) return Array.Empty<byte>();
+	//private byte[] CaptureAroundCenter(string processName, int width, int height)
+	//{
+	//	var center = _screenService.GetMessageBoxCenter(processName);
+	//	if (center == null) return Array.Empty<byte>();
 
-		int halfHoz = width / 2;
-		int halfVer = height / 2;
+	//	int halfHoz = width / 2;
+	//	int halfVer = height / 2;
 
-		var region = new System.Drawing.Rectangle(
-			center.Value.X - halfHoz,
-			center.Value.Y - halfVer,
-			width,
-			height);
+	//	var region = new System.Drawing.Rectangle(
+	//		center.Value.X - halfHoz,
+	//		center.Value.Y - halfVer,
+	//		width,
+	//		height);
 
-		return _screenService.CaptureProcessRegion(processName, region);
-	}
+	//	return _screenService.CaptureProcessRegion(processName, region);
+	//}
 
 }

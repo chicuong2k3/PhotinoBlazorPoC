@@ -93,6 +93,86 @@ internal class ScreenServiceWindows : IScreenService
 		}
 	}
 
+	public byte[] CaptureMessageBox(string processName)
+	{
+		try
+		{
+			var proc = Process.GetProcessesByName(processName).FirstOrDefault();
+			if (proc == null)
+			{
+				_logger.LogError("Process {processName} not found", processName);
+				return Array.Empty<byte>();
+			}
+
+			IntPtr messageBoxHwnd = IntPtr.Zero;
+
+			EnumWindows((hWnd, lParam) =>
+			{
+				GetWindowThreadProcessId(hWnd, out uint pid);
+				if (pid == proc.Id)
+				{
+					var className = new System.Text.StringBuilder(256);
+					GetClassName(hWnd, className, className.Capacity);
+					if (className.ToString() == "#32770") // Dialog class = MessageBox
+					{
+						messageBoxHwnd = hWnd;
+						return false; // stop enumerate
+					}
+				}
+				return true; // continue
+			}, IntPtr.Zero);
+
+			if (messageBoxHwnd == IntPtr.Zero)
+			{
+				_logger.LogWarning("MessageBox not found for process {processName}", processName);
+				return Array.Empty<byte>();
+			}
+
+			// Lấy kích thước message box
+			if (!GetWindowRect(messageBoxHwnd, out RECT messageBoxRect))
+			{
+				_logger.LogError("Failed to get MessageBox rect");
+				return Array.Empty<byte>();
+			}
+
+			int width = messageBoxRect.Width;
+			int height = messageBoxRect.Height;
+
+			// Validate kích thước
+			if (width <= 0 || height <= 0)
+			{
+				_logger.LogError("Invalid MessageBox size: {Width}x{Height}", width, height);
+				return Array.Empty<byte>();
+			}
+
+			// Chụp ảnh message box
+			using var bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+			using var g = Graphics.FromImage(bmp);
+
+			IntPtr hdcDest = g.GetHdc();
+			IntPtr hdcSrc = GetWindowDC(messageBoxHwnd);
+
+			bool success = BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, 0x00CC0020);
+
+			g.ReleaseHdc(hdcDest);
+			ReleaseDC(messageBoxHwnd, hdcSrc);
+
+			if (!success)
+			{
+				_logger.LogError("BitBlt failed for MessageBox capture");
+				return Array.Empty<byte>();
+			}
+
+			using var ms = new MemoryStream();
+			bmp.Save(ms, ImageFormat.Png);
+			return ms.ToArray();
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "CaptureMessageBox failed for process {processName}", processName);
+			return Array.Empty<byte>();
+		}
+	}
 	public Point? GetMessageBoxCenter(string processName)
 	{
 		try
