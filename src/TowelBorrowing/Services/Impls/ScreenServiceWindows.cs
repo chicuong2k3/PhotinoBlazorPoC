@@ -93,13 +93,69 @@ internal class ScreenServiceWindows : IScreenService
 		}
 	}
 
+	public Point? GetMessageBoxCenter(string processName)
+	{
+		try
+		{
+			var proc = Process.GetProcessesByName(processName).FirstOrDefault();
+			if (proc == null)
+			{
+				_logger.LogError("Process {processName} not found", processName);
+				return null;
+			}
+
+			IntPtr messageBoxHwnd = IntPtr.Zero;
+
+			EnumWindows((hWnd, lParam) =>
+			{
+				GetWindowThreadProcessId(hWnd, out uint pid);
+				if (pid == proc.Id)
+				{
+					var className = new System.Text.StringBuilder(256);
+					GetClassName(hWnd, className, className.Capacity);
+					if (className.ToString() == "#32770") // Dialog class = MessageBox
+					{
+						messageBoxHwnd = hWnd;
+						return false; // dừng enumerate
+					}
+				}
+				return true; // tiếp tục
+			}, IntPtr.Zero);
+
+			if (messageBoxHwnd == IntPtr.Zero)
+			{
+				_logger.LogWarning("MessageBox not found for process {processName}", processName);
+				return null;
+			}
+
+			GetWindowRect(messageBoxHwnd, out RECT r);
+			return new Point(r.Left + r.Width / 2, r.Top + r.Height / 2);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "GetMessageBoxCenter failed for process {processName}", processName);
+			return null;
+		}
+	}
+
 	public Point? GetProcessCenter(string processName)
 	{
 		try
 		{
 			var proc = Process.GetProcessesByName(processName)
 				.FirstOrDefault(p => p.MainWindowHandle != IntPtr.Zero);
-			if (proc == null) return null;
+			if (proc == null)
+			{
+				_logger.LogError("Process {processName} not found", processName);
+
+				var processes = Process.GetProcesses();
+				foreach (var pro in processes)
+				{
+					_logger.LogWarning("{processName} running", pro.ProcessName);
+				}
+
+				return null;
+			}
 
 			var hWnd = proc.MainWindowHandle;
 			GetClientRect(hWnd, out RECT r);
@@ -128,4 +184,19 @@ internal class ScreenServiceWindows : IScreenService
 	[DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hWnd);
 	[DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hWnd);
 	[DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+
+	// ================= P/Invoke 26/11 ====================
+	[DllImport("user32.dll")]
+	private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+	private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+	[DllImport("user32.dll")]
+	private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+
+	[DllImport("user32.dll")]
+	private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
+using Serilog;
 using System.Reflection;
 using TowelBorrowing.Data;
 using TowelBorrowing.Services;
@@ -25,11 +26,23 @@ public class Program
 
 		appBuilder.Services.AddSingleton<IConfiguration>(config);
 
+		var logDir = Path.Combine(AppContext.BaseDirectory, "Logs");
+		if (!Directory.Exists(logDir))
+			Directory.CreateDirectory(logDir);
+		Log.Logger = new LoggerConfiguration()
+						.MinimumLevel.Warning()                
+						.WriteTo.File(Path.Combine(logDir, "log-.txt"),          
+									  rollingInterval: RollingInterval.Day,
+									  retainedFileCountLimit: 7)
+						.CreateLogger();
+
 		appBuilder.Services.AddLogging(builder =>
 		{
 			builder.SetMinimumLevel(LogLevel.Information);
 			builder.AddConsole();
+			builder.AddSerilog();
 		});
+
 		appBuilder.Services.AddUIConfiguration(config);
 
 		appBuilder.RootComponents.Add<App>("app");
@@ -53,26 +66,23 @@ public class Program
 			//if (OperatingSystem.IsLinux())
 			//	return new ScreenCaptureLinux(loggerFactory.CreateLogger<ScreenCaptureLinux>());
 
-			if (OperatingSystem.IsMacOS())
-				return new ScreenServiceMacOS(loggerFactory.CreateLogger<ScreenServiceMacOS>());
+			//if (OperatingSystem.IsMacOS())
+			//	return new ScreenServiceMacOS(loggerFactory.CreateLogger<ScreenServiceMacOS>());
 
 			throw new PlatformNotSupportedException();
 		});
 
 		var app = appBuilder.Build();
+		var iconPath = Path.Combine(AppContext.BaseDirectory, "favicon.ico");
 
-		try
+		if (!File.Exists(iconPath))
 		{
-			var iconPath = Path.Combine(AppContext.BaseDirectory, "favicon.ico");
+			using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("TowelBorrowing.favicon.ico");
+			using var fs = new FileStream(iconPath, FileMode.Create, FileAccess.Write);
+			stream?.CopyTo(fs);
+		}
 
-			if (!File.Exists(iconPath))
-			{
-				using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("TowelBorrowing.favicon.ico");
-				using var fs = new FileStream(iconPath, FileMode.Create, FileAccess.Write);
-				stream?.CopyTo(fs);
-			}
-
-			app.MainWindow
+		app.MainWindow
 			.SetSize(640, 480)
 			.SetDevToolsEnabled(true)
 			.SetLogVerbosity(0)
@@ -80,23 +90,14 @@ public class Program
 			.SetChromeless(true)
 			.SetIconFile(iconPath);
 
-			AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
-			{
-				app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
-			};
-
-			app.Services.SeedData();
-			app.Run();
-		}
-		catch (Exception ex)
+		AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
 		{
-			var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-			Directory.CreateDirectory(logDir); 
-			var logFile = Path.Combine(logDir, "crashlog.txt");
-			File.WriteAllText(logFile, ex.ToString());
-		}
-		
-		
+			Log.Fatal(error.ExceptionObject as Exception, "Unhandled exception");
+			app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
+		};
+
+		app.Services.SeedData();
+		app.Run();
 	}
 }
 

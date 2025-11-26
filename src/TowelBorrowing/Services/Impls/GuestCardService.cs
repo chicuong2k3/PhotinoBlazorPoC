@@ -169,7 +169,7 @@ internal class GuestCardService : IGuestCardService
 
 	private byte[] CaptureAroundCenter(string processName, int width, int height)
 	{
-		var center = _screenService.GetProcessCenter(processName);
+		var center = _screenService.GetMessageBoxCenter(processName);
 		if (center == null) return Array.Empty<byte>();
 
 		int halfHoz = width / 2;
