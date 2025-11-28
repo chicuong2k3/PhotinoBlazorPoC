@@ -2,23 +2,34 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TowelBorrowing.Data;
 
 #nullable disable
 
-namespace TowelBorrowing.Data.Migrations
+namespace TowelBorrowing.Data.Migartions
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251123064437_UpdateDb2")]
-    partial class UpdateDb2
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
+
+            modelBuilder.Entity("TowelBorrowing.Data.Models.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppSettings");
+                });
 
             modelBuilder.Entity("TowelBorrowing.Data.Models.BorrowRecord", b =>
                 {
@@ -88,9 +99,6 @@ namespace TowelBorrowing.Data.Migrations
                     b.Property<string>("Building")
                         .IsRequired()
                         .HasMaxLength(4)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("MaxQuantity")

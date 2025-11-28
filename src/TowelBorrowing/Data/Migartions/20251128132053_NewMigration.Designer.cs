@@ -8,22 +8,39 @@ using TowelBorrowing.Data;
 
 #nullable disable
 
-namespace TowelBorrowing.Data.Migrations
+namespace TowelBorrowing.Data.Migartions
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251121102548_Init2")]
-    partial class Init2
+    [Migration("20251128132053_NewMigration")]
+    partial class NewMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
+
+            modelBuilder.Entity("TowelBorrowing.Data.Models.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppSettings");
+                });
 
             modelBuilder.Entity("TowelBorrowing.Data.Models.BorrowRecord", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BorrowQuantity")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
@@ -36,12 +53,8 @@ namespace TowelBorrowing.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Quantity")
+                    b.Property<int>("ReturnQuantity")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -89,9 +102,6 @@ namespace TowelBorrowing.Data.Migrations
                     b.Property<string>("Building")
                         .IsRequired()
                         .HasMaxLength(4)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("MaxQuantity")
