@@ -5,8 +5,7 @@ public class MaxClientMonitor
 	public Guid Id { get; private set; }
 	public string Building { get; private set; } = string.Empty;
 	public string RoomNo { get; private set; } = string.Empty;
-	public int MaxQuantity { get; private set; }
-	public DateTime Date { get; private set; }
+	public int MaxQuantity { get; set; }
 
 	private MaxClientMonitor()
 	{
@@ -15,13 +14,11 @@ public class MaxClientMonitor
 
 	public MaxClientMonitor(string building,
 						 string roomNo,
-						 int maxQuantity,
-						 DateTime date)
+						 int maxQuantity)
 	{
 		Id = Guid.NewGuid();
 		Building = building;
 		RoomNo = roomNo;
 		MaxQuantity = maxQuantity;
-		Date = date;
 	}
 }

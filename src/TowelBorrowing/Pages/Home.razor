@@ -133,25 +133,18 @@
                     continue;
                 }
 
-                var date = GetFileDate(Path.GetFileNameWithoutExtension(file.Name));
-                if (date == null)
-                {
-                    Snackbar.Add("Tên file không hợp lệ. Phải là Import_dd-MM-yyyy", Severity.Error, (cfg) =>
-                    {
-                        cfg.RequireInteraction = false;
-                        cfg.VisibleStateDuration = 800;
-                    });
-                    return;
-                }
-
                 var existingMaxClientMonitor = await
                     DbContext.MaxClientMonitors.FirstOrDefaultAsync(x => x.Building == buildingStr
-                    && x.RoomNo == roomNoStr && date.Value.Date == x.Date.Date);
+                    && x.RoomNo == roomNoStr);
                 if (existingMaxClientMonitor != null)
-                    continue;
-
-                var maxClientMonitor = new MaxClientMonitor(buildingStr, roomNoStr, max, date.Value);
-                DbContext.MaxClientMonitors.Add(maxClientMonitor);
+                {
+                    existingMaxClientMonitor.MaxQuantity = max;
+                }
+                else
+                {
+                    var maxClientMonitor = new MaxClientMonitor(buildingStr, roomNoStr, max);
+                    DbContext.MaxClientMonitors.Add(maxClientMonitor);
+                }
 
             }
 
@@ -221,22 +214,6 @@
         {
             _isExporting = false;
         }
-    }
-
-    private DateTime? GetFileDate(string fileName)
-    {
-        var dateStr = fileName.Substring("Import_".Length);
-        if (DateTime.TryParseExact(
-            dateStr,
-            "dd-MM-yyyy",
-            null,
-            System.Globalization.DateTimeStyles.None,
-            out var date))
-        {
-            return date;
-        }
-
-        return null;
     }
 
     private async Task OpenFindManually()

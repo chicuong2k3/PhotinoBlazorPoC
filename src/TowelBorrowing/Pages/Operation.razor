@@ -109,8 +109,7 @@
 
         var maxClientMonitor = await DbContext.MaxClientMonitors
                 .FirstOrDefaultAsync(x => x.RoomNo == _card.RoomNo
-                    && x.Building == _card.Building
-                    && x.Date.Date == DateTime.Now.Date);
+                    && x.Building == _card.Building);
         if (maxClientMonitor != null)
         {
             _maxBorrow = maxClientMonitor.MaxQuantity;
