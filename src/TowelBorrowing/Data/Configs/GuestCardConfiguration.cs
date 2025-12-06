@@ -20,11 +20,11 @@ internal class GuestCardConfiguration : IEntityTypeConfiguration<GuestCard>
 
 		builder.Property(g => g.Building)
 			   .IsRequired()
-			   .HasMaxLength(4);
+			   .HasMaxLength(10);
 
 		builder.Property(g => g.Floor)
 			   .IsRequired()
-			   .HasMaxLength(3);
+			   .HasMaxLength(10);
 
 		builder.Property(g => g.RoomNo)
 			   .IsRequired()

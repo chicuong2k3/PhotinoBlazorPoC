@@ -18,6 +18,6 @@ internal class MaxClientMonitorConfiguration : IEntityTypeConfiguration<MaxClien
 
 		builder.Property(x => x.Building)
 			   .IsRequired()
-			   .HasMaxLength(4);
+			   .HasMaxLength(10);
 	}
 }

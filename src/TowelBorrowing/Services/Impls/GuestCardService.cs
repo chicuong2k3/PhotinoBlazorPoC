@@ -5,7 +5,6 @@ using SixLabors.ImageSharp;
 using System.Text.RegularExpressions;
 using TowelBorrowing.Data;
 using TowelBorrowing.Models;
-using FuzzySharp;
 
 namespace TowelBorrowing.Services.Impls;
 

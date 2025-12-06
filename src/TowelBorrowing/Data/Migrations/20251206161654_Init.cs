@@ -1,12 +1,13 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace TowelBorrowing.Data.Migartions
+namespace TowelBorrowing.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class NewMigration : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,8 +16,8 @@ namespace TowelBorrowing.Data.Migartions
                 name: "AppSettings",
                 columns: table => new
                 {
-                    Key = table.Column<string>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: false)
+                    Key = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -27,11 +28,11 @@ namespace TowelBorrowing.Data.Migartions
                 name: "GuestCards",
                 columns: table => new
                 {
-                    CardNumber = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    HolderName = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
-                    Building = table.Column<string>(type: "TEXT", maxLength: 4, nullable: false),
-                    Floor = table.Column<string>(type: "TEXT", maxLength: 3, nullable: false),
-                    RoomNo = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false)
+                    CardNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    HolderName = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    Building = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    Floor = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    RoomNo = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -42,10 +43,10 @@ namespace TowelBorrowing.Data.Migartions
                 name: "MaxClientMonitors",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Building = table.Column<string>(type: "TEXT", maxLength: 4, nullable: false),
-                    RoomNo = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
-                    MaxQuantity = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Building = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    RoomNo = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    MaxQuantity = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -56,12 +57,12 @@ namespace TowelBorrowing.Data.Migartions
                 name: "BorrowRecords",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    GuestCardNumber = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    BorrowQuantity = table.Column<int>(type: "INTEGER", nullable: false),
-                    ReturnQuantity = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    GuestCardNumber = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    BorrowQuantity = table.Column<int>(type: "integer", nullable: false),
+                    ReturnQuantity = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
                 constraints: table =>
                 {

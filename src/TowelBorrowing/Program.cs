@@ -50,7 +50,7 @@ public class Program
 		appBuilder.Services.AddCustomWindow();
 
 		appBuilder.Services.AddDbContext<AppDbContext>(options =>
-			options.UseSqlite($"Data Source={Constants.DatabasePath}"));
+			options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
 
 		appBuilder.Services.AddScoped<IGuestCardService, GuestCardService>();
 		appBuilder.Services.AddScoped<IOcrService, OcrService>();

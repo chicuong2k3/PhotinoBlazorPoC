@@ -184,7 +184,7 @@
                     .Where(x => x.CreatedAt.Date == DateTime.Now.Date)
                     .ToListAsync();
 
-            if (!borrowRecords.Any())
+            if (!borrowRecords.Any())   
             {
                 Snackbar.Add("Không có khách nào chưa trả khăn!", Severity.Info, (cfg) =>
                 {
