@@ -266,7 +266,8 @@
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        NotificationService.OnBorrowRecordUpdated -= HandleBorrowRecordUpdated;
+        NotificationService.OnBorrowUpdated -= HandleBorrowUpdated;
+        NotificationService.OnReturnUpdated -= HandleReturnUpdated;
         await NotificationService.StopAsync();
     }
 }
