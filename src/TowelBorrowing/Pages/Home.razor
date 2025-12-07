@@ -124,8 +124,15 @@
                     buildingStr = "1";
                 else if (buildingStr == "B")
                     buildingStr = "2";
-                else if (buildingStr != "Villa")
+                else if (roomNoBuildingStr.Length == 4)
+                {
+                    buildingStr = "Villa";
+                    roomNoStr = roomNoBuildingStr;
+                }
+                else
+                {
                     continue;
+                }
 
                 if (!int.TryParse(roomNoStr, out int roomNo) ||
                 !int.TryParse(maxStr, out int max))
