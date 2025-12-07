@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject ILogger<Operation> Logger
+@inject IBorrowNotificationService NotificationService
 
 <MudStack Spacing="2"> 
     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -189,6 +190,7 @@
                     return;
                 }
                 await DbContext.SaveChangesAsync();
+                await NotificationService.NotifyBorrowAsync(_card.CardNumber, _card.RoomNo, _card.Building, _borrowCount);
             }
 
             if (action == "return")
@@ -204,6 +206,7 @@
                     return;
                 }
                 await DbContext.SaveChangesAsync();
+                await NotificationService.NotifyReturnAsync(_card.CardNumber, _card.RoomNo, _card.Building, _returnCount);
             }
 
             Snackbar.Add($"Thao tác thành công!", Severity.Success, (cfg) =>
@@ -214,6 +217,8 @@
 
             _borrowedCount = borrowRecord.BorrowQuantity;
             _returnedCount = borrowRecord.ReturnQuantity;
+            
+            await NotificationService.NotifyBorrowRecordUpdatedAsync(_card.CardNumber, _borrowedCount, _returnedCount);
         }
         catch (Exception e)
         {
