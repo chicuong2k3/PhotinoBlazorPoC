@@ -179,9 +179,10 @@
             _isExporting = true;
             StateHasChanged();
 
+            var today = DateTime.UtcNow.Date;
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
-                    .Where(x => x.CreatedAt.Date == DateTime.Now.Date)
+                    .Where(x => x.CreatedAt >= today && x.CreatedAt < today.AddDays(1))
                     .ToListAsync();
 
             if (!borrowRecords.Any())   

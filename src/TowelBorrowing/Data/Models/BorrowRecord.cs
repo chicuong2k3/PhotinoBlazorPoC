@@ -18,7 +18,7 @@ public class BorrowRecord
 		GuestCardNumber = guestCardNumber;
 		BorrowQuantity = 0;
 		ReturnQuantity = 0;
-		CreatedAt = DateTime.Now;
+		CreatedAt = DateTime.UtcNow;
 	}
 
 	public Result Borrow(int quantity)
