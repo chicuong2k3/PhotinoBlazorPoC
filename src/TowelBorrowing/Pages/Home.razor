@@ -212,7 +212,8 @@
             _isExporting = true;
             StateHasChanged();
 
-            var today = DateTime.UtcNow.Date;
+            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone).Date;
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
                     .Where(x => x.CreatedAt >= today && x.CreatedAt < today.AddDays(1))
@@ -288,7 +289,8 @@
     {
         try
         {
-            var cutoffDate = DateTime.UtcNow.Date.AddDays(-30);
+            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            var cutoffDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone).Date.AddDays(-30);
             var oldRecords = await DbContext.BorrowRecords
                 .Where(x => x.CreatedAt < cutoffDate)
                 .ToListAsync();
