@@ -215,7 +215,7 @@
             var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
             var vietnamNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
             var todayStartVietnam = vietnamNow.Date;
-            var todayStartUtc = todayStartVietnam.AddHours(-7); // Việt Nam là UTC+7
+            var todayStartUtc = todayStartVietnam.AddHours(-7); // Convert về UTC
             var todayEndUtc = todayStartUtc.AddDays(1);
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
@@ -292,16 +292,18 @@
     {
         try
         {
-            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-            var vietnamNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
-            var cutoffDateVietnam = vietnamNow.Date.AddDays(-30);
-            var cutoffDateUtc = cutoffDateVietnam.AddHours(-7); // Việt Nam là UTC+7
-            var oldRecords = await DbContext.BorrowRecords
-                .Where(x => x.CreatedAt < cutoffDateUtc)
-                .ToListAsync();
-            if (oldRecords.Any())
+            var utcNow = DateTime.UtcNow;
+            var vietnamNow = utcNow.AddHours(7); // Việt Nam là UTC+7
+            var todayStartVietnam = vietnamNow.Date;
+            var todayStartUtc = todayStartVietnam.AddHours(-7); // Convert về UTC
+            var todayEndUtc = todayStartUtc.AddDays(1);
+            var borrowRecords = await DbContext.BorrowRecords
+                    .Include(x => x.GuestCard)
+                    .Where(x => x.CreatedAt >= todayStartUtc && x.CreatedAt < todayEndUtc)
+                    .ToListAsync();
+            if (borrowRecords.Any())
             {
-                DbContext.BorrowRecords.RemoveRange(oldRecords);
+                DbContext.BorrowRecords.RemoveRange(borrowRecords);
                 await DbContext.SaveChangesAsync();
             }
             Snackbar.Add("Xóa dữ liệu cũ thành công!", Severity.Success, (cfg) =>
