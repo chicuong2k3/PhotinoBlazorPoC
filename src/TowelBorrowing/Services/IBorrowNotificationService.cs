@@ -6,6 +6,8 @@ public interface IBorrowNotificationService
     event Func<BorrowNotification, Task>? OnReturnUpdated;
     event Func<BorrowRecordNotification, Task>? OnBorrowRecordUpdated;
 
+    Task StartAsync();
+    Task StopAsync();
     Task NotifyBorrowAsync(string cardNumber, string roomNo, string building, int quantity);
     Task NotifyReturnAsync(string cardNumber, string roomNo, string building, int quantity);
     Task NotifyBorrowRecordUpdatedAsync(string cardNumber, int borrowedCount, int returnedCount);
