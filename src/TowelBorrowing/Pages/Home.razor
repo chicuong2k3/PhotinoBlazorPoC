@@ -214,7 +214,8 @@
 
             var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
             var vietnamNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
-            var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(vietnamNow.Date, vietnamTimeZone);
+            var todayStartVietnam = vietnamNow.Date;
+            var todayStartUtc = todayStartVietnam.AddHours(-7); // Việt Nam là UTC+7
             var todayEndUtc = todayStartUtc.AddDays(1);
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
@@ -294,7 +295,7 @@
             var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
             var vietnamNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
             var cutoffDateVietnam = vietnamNow.Date.AddDays(-30);
-            var cutoffDateUtc = TimeZoneInfo.ConvertTimeToUtc(cutoffDateVietnam, vietnamTimeZone);
+            var cutoffDateUtc = cutoffDateVietnam.AddHours(-7); // Việt Nam là UTC+7
             var oldRecords = await DbContext.BorrowRecords
                 .Where(x => x.CreatedAt < cutoffDateUtc)
                 .ToListAsync();
