@@ -1,4 +1,5 @@
 @page "/"
+@using EFCore.BulkExtensions
 
 @inject IGuestCardService GuestCardService
 @inject AppDbContext DbContext
@@ -112,6 +113,13 @@
             byte[] fileBytes = ms.ToArray();
             var rows = ImportService.ReadExcel(fileBytes);
 
+            var toUpdate = new List<MaxClientMonitor>();
+            var toAdd = new List<MaxClientMonitor>();
+
+            // Load tất cả MaxClientMonitor vào memory một lần
+            var existingMonitors = await DbContext.MaxClientMonitors
+                .ToDictionaryAsync(x => (x.Building, x.RoomNo), x => x);
+
             foreach (var row in rows)
             {
                 var roomNoBuildingStr = row[0];
@@ -140,22 +148,24 @@
                     continue;
                 }
 
-                var existingMaxClientMonitor = await
-                    DbContext.MaxClientMonitors.FirstOrDefaultAsync(x => x.Building == buildingStr
-                    && x.RoomNo == roomNoStr);
-                if (existingMaxClientMonitor != null)
+                var key = (buildingStr, roomNoStr);
+                if (existingMonitors.TryGetValue(key, out var existingMaxClientMonitor))
                 {
                     existingMaxClientMonitor.MaxQuantity = max;
+                    toUpdate.Add(existingMaxClientMonitor);
                 }
                 else
                 {
                     var maxClientMonitor = new MaxClientMonitor(buildingStr, roomNoStr, max);
-                    DbContext.MaxClientMonitors.Add(maxClientMonitor);
+                    toAdd.Add(maxClientMonitor);
                 }
-
             }
 
-            await DbContext.SaveChangesAsync();
+            if (toUpdate.Any())
+                await DbContext.BulkUpdateAsync(toUpdate);
+            
+            if (toAdd.Any())
+                await DbContext.BulkInsertAsync(toAdd);
 
             Snackbar.Add("Thao tác thành công!", Severity.Success, (cfg) =>
             {
@@ -175,8 +185,6 @@
         {
             _isImporting = false;
         }
-
-
     }
 
     private async Task ExportExcel()
