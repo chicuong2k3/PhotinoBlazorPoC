@@ -118,7 +118,7 @@
         var borrowRecord = await DbContext.BorrowRecords
             .Include(x => x.GuestCard)
             .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
-                    && x.CreatedAt.Date == DateTime.Now.Date);
+                    && x.CreatedAt.Date == DateTime.UtcNow.Date);
 
         if (borrowRecord != null)
         {
