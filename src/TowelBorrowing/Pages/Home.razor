@@ -9,6 +9,7 @@
 @inject IExportService ExportService
 @inject ILogger<Home> Logger
 @inject IDialogService DialogService
+@inject IDatabaseService DatabaseService
 
 <MudStack>
     <MudStack Row>
@@ -49,6 +50,16 @@
                Ripple="false" DropShadow="false">
         Cấu Hình
     </HUIButton>
+
+    <MudStack Row>
+        <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Settings"
+                   OnClick="DeleteOldData" Style="width: 100%"
+                   Ripple="false" DropShadow="false">
+            Xóa Dữ Liệu Cũ (Quá 30 Ngày)
+        </HUIButton>
+    </MudStack>
+    <MudText Typo="Typo.subtitle2">Dung lượng database còn lại: @_storageInfo?.RemainingSize</MudText>
 </MudStack>
 
 @code {
@@ -56,6 +67,13 @@
     private bool _isImporting = false;
     private bool _isExporting = false;
     IList<IBrowserFile> _files = new List<IBrowserFile>();
+    private DatabaseStorageInfo? _storageInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _storageInfo = await DatabaseService.GetDatabaseStorageInfoAsync();
+        await base.OnInitializedAsync();
+    }
 
     private async Task ScanCard()
     {
@@ -263,6 +281,36 @@
                     cfg.VisibleStateDuration = 800;
                 });
             }
+        }
+    }
+
+    private async Task DeleteOldData()
+    {
+        try
+        {
+            var cutoffDate = DateTime.UtcNow.Date.AddDays(-30);
+            var oldRecords = await DbContext.BorrowRecords
+                .Where(x => x.CreatedAt < cutoffDate)
+                .ToListAsync();
+            if (oldRecords.Any())
+            {
+                DbContext.BorrowRecords.RemoveRange(oldRecords);
+                await DbContext.SaveChangesAsync();
+            }
+            Snackbar.Add("Xóa dữ liệu cũ thành công!", Severity.Success, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("Error while deleting old data: {errMessage}", e.Message);
+            Snackbar.Add("Có lỗi xảy ra! Thử lại sau!", Severity.Error, (cfg) =>
+            {
+                cfg.RequireInteraction = false;
+                cfg.VisibleStateDuration = 800;
+            });
         }
     }
 }

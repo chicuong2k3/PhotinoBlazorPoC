@@ -56,6 +56,7 @@ public class Program
 		appBuilder.Services.AddScoped<IOcrService, OcrService>();
 		appBuilder.Services.AddScoped<IImportService, ImportService>();
 		appBuilder.Services.AddScoped<IExportService, ExportService>();
+		appBuilder.Services.AddScoped<IDatabaseService, DatabaseService>();
 		appBuilder.Services.AddSingleton<IScreenService>(provider =>
 		{
 			var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
