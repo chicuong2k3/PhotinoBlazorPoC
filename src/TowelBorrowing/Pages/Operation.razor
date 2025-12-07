@@ -206,8 +206,8 @@
                     return;
                 }
                 await DbContext.SaveChangesAsync();
-                _borrowCount = 0;
                 await NotificationService.NotifyBorrowAsync(_card.CardNumber, _card.RoomNo, _card.Building, _borrowCount);
+                _borrowCount = 0;
             }
 
             if (action == "return")
@@ -223,8 +223,8 @@
                     return;
                 }
                 await DbContext.SaveChangesAsync();
-                _returnCount = 0;
                 await NotificationService.NotifyReturnAsync(_card.CardNumber, _card.RoomNo, _card.Building, _returnCount);
+                _returnCount = 0;
             }
 
             Snackbar.Add($"Thao tác thành công!", Severity.Success, (cfg) =>
