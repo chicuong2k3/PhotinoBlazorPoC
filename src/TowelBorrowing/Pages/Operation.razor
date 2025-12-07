@@ -89,7 +89,7 @@
 
 
 
-    @code {
+@code {
 
     [Parameter]
     public string CardNumber { get; set; } = string.Empty;
@@ -143,7 +143,7 @@
 
         var todayStartUtc = GetTodayStartUtc();
         var todayEndUtc = GetTodayEndUtc();
-        
+
         var borrowRecord = await DbContext.BorrowRecords
             .Include(x => x.GuestCard)
             .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
@@ -179,7 +179,7 @@
         {
             var todayStartUtc = GetTodayStartUtc();
             var todayEndUtc = GetTodayEndUtc();
-            
+
             var borrowRecord = await DbContext.BorrowRecords
                         .Include(x => x.GuestCard)
                         .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
@@ -206,6 +206,7 @@
                     return;
                 }
                 await DbContext.SaveChangesAsync();
+                _borrowCount = 0;
                 await NotificationService.NotifyBorrowAsync(_card.CardNumber, _card.RoomNo, _card.Building, _borrowCount);
             }
 
@@ -222,6 +223,7 @@
                     return;
                 }
                 await DbContext.SaveChangesAsync();
+                _returnCount = 0;
                 await NotificationService.NotifyReturnAsync(_card.CardNumber, _card.RoomNo, _card.Building, _returnCount);
             }
 
