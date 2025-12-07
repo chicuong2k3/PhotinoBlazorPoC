@@ -100,6 +100,29 @@
     private int _returnedCount;
     private int RemainCount => _maxBorrow - _borrowedCount;
 
+    private DateTime GetTodayDate()
+    {
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var localNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, vietnamTimeZone);
+        return localNow.Date;
+    }
+
+    private DateTime GetTodayStartUtc()
+    {
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var localNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, vietnamTimeZone);
+        var todayStart = localNow.Date; 
+        return TimeZoneInfo.ConvertTimeToUtc(todayStart, vietnamTimeZone);
+    }
+
+    private DateTime GetTodayEndUtc()
+    {
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var localNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, vietnamTimeZone);
+        var tomorrowStart = localNow.Date.AddDays(1); 
+        return TimeZoneInfo.ConvertTimeToUtc(tomorrowStart, vietnamTimeZone);
+    }
+
     protected override async Task OnInitializedAsync()
     {
         _card = await DbContext.GuestCards
@@ -115,10 +138,14 @@
             _maxBorrow = maxClientMonitor.MaxQuantity;
         }
 
+        var todayStartUtc = GetTodayStartUtc();
+        var todayEndUtc = GetTodayEndUtc();
+        
         var borrowRecord = await DbContext.BorrowRecords
             .Include(x => x.GuestCard)
             .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
-                    && x.CreatedAt.Date == DateTime.UtcNow.Date);
+                    && x.CreatedAt >= todayStartUtc
+                    && x.CreatedAt < todayEndUtc);
 
         if (borrowRecord != null)
         {
@@ -133,11 +160,14 @@
 
         try
         {
-            var today = DateTime.UtcNow.Date;
+            var todayStartUtc = GetTodayStartUtc();
+            var todayEndUtc = GetTodayEndUtc();
+            
             var borrowRecord = await DbContext.BorrowRecords
                         .Include(x => x.GuestCard)
                         .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
-                           && x.CreatedAt.Date == today);
+                           && x.CreatedAt >= todayStartUtc
+                           && x.CreatedAt < todayEndUtc);
 
             if (borrowRecord == null)
             {
