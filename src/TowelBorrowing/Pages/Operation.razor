@@ -133,7 +133,7 @@
 
         try
         {
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.Date;
             var borrowRecord = await DbContext.BorrowRecords
                         .Include(x => x.GuestCard)
                         .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
