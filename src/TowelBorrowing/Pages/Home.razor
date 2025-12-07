@@ -212,8 +212,8 @@
             _isExporting = true;
             StateHasChanged();
 
-            var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-            var vietnamNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vietnamTimeZone);
+            var utcNow = DateTime.UtcNow;
+            var vietnamNow = utcNow.AddHours(7); // Việt Nam là UTC+7
             var todayStartVietnam = vietnamNow.Date;
             var todayStartUtc = todayStartVietnam.AddHours(-7); // Convert về UTC
             var todayEndUtc = todayStartUtc.AddDays(1);
