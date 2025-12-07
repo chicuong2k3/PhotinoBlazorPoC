@@ -7,6 +7,8 @@
 @inject ILogger<Operation> Logger
 @inject IBorrowNotificationService NotificationService
 
+@implements IAsyncDisposable
+
 <MudStack Spacing="2"> 
     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
         <MudStack Row AlignItems="AlignItems.Center">
@@ -153,6 +155,20 @@
             _borrowedCount = borrowRecord.BorrowQuantity;
             _returnedCount = borrowRecord.ReturnQuantity;
         }
+
+        // Subscribe to real-time updates
+        NotificationService.OnBorrowRecordUpdated += HandleBorrowRecordUpdated;
+        await NotificationService.StartAsync();
+    }
+
+    private async Task HandleBorrowRecordUpdated(BorrowRecordNotification notification)
+    {
+        if (notification.CardNumber == CardNumber)
+        {
+            _borrowedCount = notification.BorrowedCount;
+            _returnedCount = notification.ReturnedCount;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task Submit(string action)
@@ -237,5 +253,11 @@
         if (raw == "2") return "B";
 
         return raw;
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        NotificationService.OnBorrowRecordUpdated -= HandleBorrowRecordUpdated;
+        await NotificationService.StopAsync();
     }
 }

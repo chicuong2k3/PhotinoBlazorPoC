@@ -9,6 +9,10 @@ public class BorrowNotificationService : IBorrowNotificationService
     private readonly HubConnection? _hubConnection;
     private readonly ILogger<BorrowNotificationService> _logger;
 
+    public event Func<BorrowNotification, Task>? OnBorrowUpdated;
+    public event Func<BorrowNotification, Task>? OnReturnUpdated;
+    public event Func<BorrowRecordNotification, Task>? OnBorrowRecordUpdated;
+
     public BorrowNotificationService(ILogger<BorrowNotificationService> logger, IConfiguration configuration)
     {
         _logger = logger;
@@ -27,19 +31,25 @@ public class BorrowNotificationService : IBorrowNotificationService
     {
         if (_hubConnection == null) return;
 
-        _hubConnection.On<dynamic>("BorrowUpdated", (data) =>
+        _hubConnection.On<BorrowNotification>("BorrowUpdated", async (data) =>
         {
-            _logger.LogInformation("Borrow updated: {Data}", (object)data);
+            _logger.LogInformation("Borrow updated: {Data}", data);
+            if (OnBorrowUpdated != null)
+                await OnBorrowUpdated(data);
         });
 
-        _hubConnection.On<dynamic>("ReturnUpdated", (data) =>
+        _hubConnection.On<BorrowNotification>("ReturnUpdated", async (data) =>
         {
-            _logger.LogInformation("Return updated: {Data}", (object)data);
+            _logger.LogInformation("Return updated: {Data}", data);
+            if (OnReturnUpdated != null)
+                await OnReturnUpdated(data);
         });
 
-        _hubConnection.On<dynamic>("BorrowRecordUpdated", (data) =>
+        _hubConnection.On<BorrowRecordNotification>("BorrowRecordUpdated", async (data) =>
         {
-            _logger.LogInformation("Borrow record updated: {Data}", (object)data);
+            _logger.LogInformation("Borrow record updated: {Data}", data);
+            if (OnBorrowRecordUpdated != null)
+                await OnBorrowRecordUpdated(data);
         });
 
         _hubConnection.Closed += async (exception) =>
