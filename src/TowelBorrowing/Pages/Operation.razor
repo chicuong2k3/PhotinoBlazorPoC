@@ -239,6 +239,10 @@
                         return;
                     }
                     await DbContext.SaveChangesAsync();
+                    
+                    // Reload the entity to get updated values from database
+                    await DbContext.Entry(borrowRecord).ReloadAsync();
+                    
                     await transaction.CommitAsync();
                     
                     // Notify others (not yourself)
@@ -262,6 +266,10 @@
                         return;
                     }
                     await DbContext.SaveChangesAsync();
+                    
+                    // Reload the entity to get updated values from database
+                    await DbContext.Entry(borrowRecord).ReloadAsync();
+                    
                     await transaction.CommitAsync();
                     
                     // Notify others (not yourself)
