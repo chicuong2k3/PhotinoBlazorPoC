@@ -8,13 +8,14 @@ namespace TowelBorrowing.Services.Impls;
 
 internal class ExportService : IExportService
 {
-	private readonly AppDbContext _dbContext;
+	private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 	private static readonly TimeZoneInfo _vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
-	public ExportService(AppDbContext dbContext)
+	public ExportService(IDbContextFactory<AppDbContext> dbContextFactory)
 	{
-		_dbContext = dbContext;
+		_dbContextFactory = dbContextFactory;
 	}
+	
 	public async Task ExportBorrowInfo(List<BorrowRecord> borrowRecords)
 	{
 		var vietnamNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _vietnamTimeZone);
@@ -56,7 +57,8 @@ internal class ExportService : IExportService
 
 		var fileName = $"BorrowInfo_{vietnamNow:dd-MM-yyyy_HH-mm-ss}.xlsx";
 
-		var folderName = (await _dbContext.AppSettings
+		await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+		var folderName = (await dbContext.AppSettings
 							.FirstOrDefaultAsync(x => x.Key == Constants.ExportFolderName))?.Value;
 		var folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), folderName ?? "MuonKhanExport");
 

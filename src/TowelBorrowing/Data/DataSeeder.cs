@@ -9,7 +9,8 @@ public static class DataSeeder
 	public static void SeedData(this IServiceProvider serviceProvider)
 	{
 		using var scope = serviceProvider.CreateScope();
-		using var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+		var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+		using var dbContext = dbContextFactory.CreateDbContext();
 
 		if (dbContext.Database.GetPendingMigrations().Any())
 		{

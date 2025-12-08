@@ -49,7 +49,7 @@ public class Program
 
 		appBuilder.Services.AddCustomWindow();
 
-		appBuilder.Services.AddDbContext<AppDbContext>(options =>
+		appBuilder.Services.AddDbContextFactory<AppDbContext>(options =>
 			options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
 
 		appBuilder.Services.AddScoped<IGuestCardService, GuestCardService>();

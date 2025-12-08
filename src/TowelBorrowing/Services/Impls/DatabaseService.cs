@@ -5,18 +5,20 @@ namespace TowelBorrowing.Services.Impls;
 
 public class DatabaseService : IDatabaseService
 {
-    private readonly AppDbContext _dbContext;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
-    public DatabaseService(AppDbContext dbContext)
+    public DatabaseService(IDbContextFactory<AppDbContext> dbContextFactory)
     {
-        _dbContext = dbContext;
+        _dbContextFactory = dbContextFactory;
     }
 
     public async Task<DatabaseStorageInfo> GetDatabaseStorageInfoAsync()
     {
         try
         {
-            var result = await _dbContext.Database
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+            
+            var result = await dbContext.Database
                 .SqlQueryRaw<DatabaseSizeRaw>(
                     "SELECT " +
                     "pg_size_pretty(pg_database_size(current_database())) as \"UsedSize\", " +
