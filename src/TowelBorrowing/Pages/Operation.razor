@@ -1,7 +1,7 @@
 @page "/operation/{CardNumber}"
 
 @inject IGuestCardService GuestCardService
-@inject AppDbContext DbContext
+@inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject ILogger<Operation> Logger
@@ -131,12 +131,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _card = await DbContext.GuestCards
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        
+        _card = await dbContext.GuestCards
             .FirstOrDefaultAsync(x => x.CardNumber == CardNumber);
 
         if (_card == null) return;
 
-        var maxClientMonitor = await DbContext.MaxClientMonitors
+        var maxClientMonitor = await dbContext.MaxClientMonitors
                 .FirstOrDefaultAsync(x => x.RoomNo == _card.RoomNo
                     && x.Building == _card.Building);
         if (maxClientMonitor != null)
@@ -156,10 +158,12 @@
     {
         if (_card == null) return;
 
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        
         var todayStartUtc = GetTodayStartUtc();
         var todayEndUtc = GetTodayEndUtc();
 
-        var borrowRecord = await DbContext.BorrowRecords
+        var borrowRecord = await dbContext.BorrowRecords
             .Include(x => x.GuestCard)
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
@@ -205,15 +209,17 @@
         _isSubmitting = true;
         try
         {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            
             var todayStartUtc = GetTodayStartUtc();
             var todayEndUtc = GetTodayEndUtc();
 
             // Use transaction for atomicity
-            using var transaction = await DbContext.Database.BeginTransactionAsync();
+            using var transaction = await dbContext.Database.BeginTransactionAsync();
             
             try
             {
-                var borrowRecord = await DbContext.BorrowRecords
+                var borrowRecord = await dbContext.BorrowRecords
                             .Include(x => x.GuestCard)
                             .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
                                && x.CreatedAt >= todayStartUtc
@@ -222,8 +228,8 @@
                 if (borrowRecord == null)
                 {
                     borrowRecord = new BorrowRecord(_card.CardNumber);
-                    DbContext.BorrowRecords.Add(borrowRecord);
-                    await DbContext.SaveChangesAsync();
+                    dbContext.BorrowRecords.Add(borrowRecord);
+                    await dbContext.SaveChangesAsync();
                 }
 
                 if (action == "borrow")
@@ -238,10 +244,10 @@
                         });
                         return;
                     }
-                    await DbContext.SaveChangesAsync();
+                    await dbContext.SaveChangesAsync();
                     
                     // Reload the entity to get updated values from database
-                    await DbContext.Entry(borrowRecord).ReloadAsync();
+                    await dbContext.Entry(borrowRecord).ReloadAsync();
                     
                     await transaction.CommitAsync();
                     
@@ -265,10 +271,10 @@
                         });
                         return;
                     }
-                    await DbContext.SaveChangesAsync();
+                    await dbContext.SaveChangesAsync();
                     
                     // Reload the entity to get updated values from database
-                    await DbContext.Entry(borrowRecord).ReloadAsync();
+                    await dbContext.Entry(borrowRecord).ReloadAsync();
                     
                     await transaction.CommitAsync();
                     
