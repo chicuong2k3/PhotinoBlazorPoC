@@ -58,6 +58,7 @@
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
                        Size="Size.Small"
                        OnClick="@(() => Submit("borrow"))"
+                       Disabled="@_isSubmitting"
                        Ripple="false" DropShadow="false">
                 Mượn
             </HUIButton>
@@ -72,6 +73,7 @@
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
                        Size="Size.Small"
                        OnClick="@(() => Submit("return"))"
+                       Disabled="@_isSubmitting"
                        Ripple="false" DropShadow="false">
                 Trả
             </HUIButton>
@@ -102,6 +104,7 @@
     private int _borrowedCount;
     private int _returnedCount;
     private int RemainCount => _maxBorrow - _borrowedCount;
+    private bool _isSubmitting = false;
 
     private DateTime GetTodayDate()
     {
@@ -141,11 +144,24 @@
             _maxBorrow = maxClientMonitor.MaxQuantity;
         }
 
+        await LoadTodayRecordAsync();
+
+        // Subscribe to real-time updates
+        NotificationService.OnBorrowUpdated += HandleBorrowUpdated;
+        NotificationService.OnReturnUpdated += HandleReturnUpdated;
+        await NotificationService.StartAsync();
+    }
+
+    private async Task LoadTodayRecordAsync()
+    {
+        if (_card == null) return;
+
         var todayStartUtc = GetTodayStartUtc();
         var todayEndUtc = GetTodayEndUtc();
 
         var borrowRecord = await DbContext.BorrowRecords
             .Include(x => x.GuestCard)
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
                     && x.CreatedAt >= todayStartUtc
                     && x.CreatedAt < todayEndUtc);
@@ -155,18 +171,19 @@
             _borrowedCount = borrowRecord.BorrowQuantity;
             _returnedCount = borrowRecord.ReturnQuantity;
         }
-
-        // Subscribe to real-time updates
-        NotificationService.OnBorrowUpdated += HandleBorrowUpdated;
-        NotificationService.OnReturnUpdated += HandleReturnUpdated;
-        await NotificationService.StartAsync();
+        else
+        {
+            _borrowedCount = 0;
+            _returnedCount = 0;
+        }
     }
 
     private async Task HandleBorrowUpdated(BorrowNotification notification)
     {
         if (notification.CardNumber == CardNumber)
         {
-            _borrowedCount = notification.Quantity;
+            // Reload from database to get accurate counts
+            await LoadTodayRecordAsync();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -175,75 +192,98 @@
     {
         if (notification.CardNumber == CardNumber)
         {
-            _returnedCount = notification.Quantity;
+            // Reload from database to get accurate counts
+            await LoadTodayRecordAsync();
             await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task Submit(string action)
     {
-        if (_card == null) return;
+        if (_card == null || _isSubmitting) return;
 
+        _isSubmitting = true;
         try
         {
             var todayStartUtc = GetTodayStartUtc();
             var todayEndUtc = GetTodayEndUtc();
 
-            var borrowRecord = await DbContext.BorrowRecords
-                        .Include(x => x.GuestCard)
-                        .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
-                           && x.CreatedAt >= todayStartUtc
-                           && x.CreatedAt < todayEndUtc);
-
-            if (borrowRecord == null)
+            // Use transaction for atomicity
+            using var transaction = await DbContext.Database.BeginTransactionAsync();
+            
+            try
             {
-                borrowRecord = new BorrowRecord(_card.CardNumber);
-                DbContext.BorrowRecords.Add(borrowRecord);
-                await DbContext.SaveChangesAsync();
-            }
+                var borrowRecord = await DbContext.BorrowRecords
+                            .Include(x => x.GuestCard)
+                            .FirstOrDefaultAsync(x => x.GuestCardNumber == _card.CardNumber
+                               && x.CreatedAt >= todayStartUtc
+                               && x.CreatedAt < todayEndUtc);
 
-            if (action == "borrow")
-            {
-                var result = borrowRecord.Borrow(_borrowCount);
-                if (result.IsFailed)
+                if (borrowRecord == null)
                 {
-                    Snackbar.Add(result.Errors[0].Message, Severity.Error, (cfg) =>
-                    {
-                        cfg.RequireInteraction = false;
-                        cfg.VisibleStateDuration = 800;
-                    });
-                    return;
+                    borrowRecord = new BorrowRecord(_card.CardNumber);
+                    DbContext.BorrowRecords.Add(borrowRecord);
+                    await DbContext.SaveChangesAsync();
                 }
-                await DbContext.SaveChangesAsync();
-                await NotificationService.NotifyBorrowAsync(_card.CardNumber, _card.RoomNo, _card.Building, _borrowCount);
-                _borrowCount = 0;
-            }
 
-            if (action == "return")
-            {
-                var result = borrowRecord.Return(_returnCount);
-                if (result.IsFailed)
+                if (action == "borrow")
                 {
-                    Snackbar.Add(result.Errors[0].Message, Severity.Error, (cfg) =>
+                    var result = borrowRecord.Borrow(_borrowCount);
+                    if (result.IsFailed)
                     {
-                        cfg.RequireInteraction = false;
-                        cfg.VisibleStateDuration = 800;
-                    });
-                    return;
+                        Snackbar.Add(result.Errors[0].Message, Severity.Error, (cfg) =>
+                        {
+                            cfg.RequireInteraction = false;
+                            cfg.VisibleStateDuration = 800;
+                        });
+                        return;
+                    }
+                    await DbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    
+                    // Notify others (not yourself)
+                    await NotificationService.NotifyBorrowAsync(_card.CardNumber, _card.RoomNo, _card.Building, _borrowCount);
+                    
+                    // Update local state from the saved record
+                    _borrowedCount = borrowRecord.BorrowQuantity;
+                    _returnedCount = borrowRecord.ReturnQuantity;
+                    _borrowCount = 0;
                 }
-                await DbContext.SaveChangesAsync();
-                await NotificationService.NotifyReturnAsync(_card.CardNumber, _card.RoomNo, _card.Building, _returnCount);
-                _returnCount = 0;
+                else if (action == "return")
+                {
+                    var result = borrowRecord.Return(_returnCount);
+                    if (result.IsFailed)
+                    {
+                        Snackbar.Add(result.Errors[0].Message, Severity.Error, (cfg) =>
+                        {
+                            cfg.RequireInteraction = false;
+                            cfg.VisibleStateDuration = 800;
+                        });
+                        return;
+                    }
+                    await DbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    
+                    // Notify others (not yourself)
+                    await NotificationService.NotifyReturnAsync(_card.CardNumber, _card.RoomNo, _card.Building, _returnCount);
+                    
+                    // Update local state from the saved record
+                    _borrowedCount = borrowRecord.BorrowQuantity;
+                    _returnedCount = borrowRecord.ReturnQuantity;
+                    _returnCount = 0;
+                }
+
+                Snackbar.Add($"Thao tác thành công!", Severity.Success, (cfg) =>
+                {
+                    cfg.RequireInteraction = false;
+                    cfg.VisibleStateDuration = 800;
+                });
             }
-
-            Snackbar.Add($"Thao tác thành công!", Severity.Success, (cfg) =>
+            catch
             {
-                cfg.RequireInteraction = false;
-                cfg.VisibleStateDuration = 800;
-            });
-
-            _borrowedCount = borrowRecord.BorrowQuantity;
-            _returnedCount = borrowRecord.ReturnQuantity;
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
         catch (Exception e)
         {
@@ -253,6 +293,10 @@
                 cfg.RequireInteraction = false;
                 cfg.VisibleStateDuration = 800;
             });
+        }
+        finally
+        {
+            _isSubmitting = false;
         }
     }
 
