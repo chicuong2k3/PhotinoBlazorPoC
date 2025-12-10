@@ -52,12 +52,12 @@
     </HUIButton>
 
     <MudStack Row>
-        <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
+        @* <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Settings"
                    OnClick="DeleteOldData" Style="width: 100%"
                    Ripple="false" DropShadow="false">
             Xóa Dữ Liệu Cũ (Quá 30 Ngày)
-        </HUIButton>
+        </HUIButton> *@
     </MudStack>
     <MudText Typo="Typo.subtitle2">Dung lượng database còn lại: @_storageInfo?.RemainingSize</MudText>
 </MudStack>

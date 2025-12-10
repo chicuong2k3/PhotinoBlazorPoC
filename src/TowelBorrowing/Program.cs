@@ -30,10 +30,11 @@ public class Program
 		if (!Directory.Exists(logDir))
 			Directory.CreateDirectory(logDir);
 		Log.Logger = new LoggerConfiguration()
-						.MinimumLevel.Warning()                
+						.MinimumLevel.Information()
 						.WriteTo.File(Path.Combine(logDir, "log-.txt"),          
 									  rollingInterval: RollingInterval.Day,
 									  retainedFileCountLimit: 7)
+						.WriteTo.Console()
 						.CreateLogger();
 
 		appBuilder.Services.AddLogging(builder =>
@@ -58,6 +59,7 @@ public class Program
 		appBuilder.Services.AddScoped<IExportService, ExportService>();
 		appBuilder.Services.AddScoped<IDatabaseService, DatabaseService>();
 		appBuilder.Services.AddSingleton<IBorrowNotificationService, BorrowNotificationService>();
+		appBuilder.Services.AddSingleton<BorrowRecordLoggerService>(); // Changed from AddHostedService
 		appBuilder.Services.AddSingleton<IScreenService>(provider =>
 		{
 			var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
@@ -75,6 +77,11 @@ public class Program
 		});
 
 		var app = appBuilder.Build();
+		
+		// Start the logger service
+		var loggerService = app.Services.GetRequiredService<BorrowRecordLoggerService>();
+		loggerService.Start();
+		
 		var iconPath = Path.Combine(AppContext.BaseDirectory, "favicon.ico");
 
 		if (!File.Exists(iconPath))
