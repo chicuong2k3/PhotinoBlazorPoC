@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Serilog;
+using Serilog.Sinks.PostgreSQL;
 using System.Reflection;
 using TowelBorrowing.Data;
 using TowelBorrowing.Services;
@@ -29,12 +30,34 @@ public class Program
 		var logDir = Path.Combine(AppContext.BaseDirectory, "Logs");
 		if (!Directory.Exists(logDir))
 			Directory.CreateDirectory(logDir);
+
+		// Configure column mapping for PostgreSQL
+		IDictionary<string, ColumnWriterBase> columnWriters = new Dictionary<string, ColumnWriterBase>
+		{
+			{ "message", new RenderedMessageColumnWriter() },
+			{ "message_template", new MessageTemplateColumnWriter() },
+			{ "level", new LevelColumnWriter(true, NpgsqlTypes.NpgsqlDbType.Varchar) },
+			{ "raise_date", new TimestampColumnWriter() },
+			{ "exception", new ExceptionColumnWriter() },
+			{ "properties", new LogEventSerializedColumnWriter() },
+			{ "props_test", new PropertiesColumnWriter() },
+			{ "machine_name", new SinglePropertyColumnWriter("MachineName", PropertyWriteMethod.ToString) }
+		};
+
+		var connectionString = config.GetConnectionString("DefaultConnection");
+
 		Log.Logger = new LoggerConfiguration()
 						.MinimumLevel.Information()
 						.WriteTo.File(Path.Combine(logDir, "log-.txt"),          
 									  rollingInterval: RollingInterval.Day,
 									  retainedFileCountLimit: 7)
 						.WriteTo.Console()
+						.WriteTo.PostgreSQL(
+							connectionString: connectionString,
+							tableName: "logs",
+							columnOptions: columnWriters,
+							needAutoCreateTable: true)
+						.Enrich.WithMachineName()
 						.CreateLogger();
 
 		appBuilder.Services.AddLogging(builder =>

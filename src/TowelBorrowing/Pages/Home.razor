@@ -68,11 +68,24 @@
     private bool _isExporting = false;
     IList<IBrowserFile> _files = new List<IBrowserFile>();
     private DatabaseStorageInfo? _storageInfo;
+    
+    // ✅ Khai báo Vietnam timezone một lần, dùng chung cho toàn bộ component
+    private static readonly TimeZoneInfo _vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
     protected override async Task OnInitializedAsync()
     {
         _storageInfo = await DatabaseService.GetDatabaseStorageInfoAsync();
         await base.OnInitializedAsync();
+    }
+
+    private (DateTime startUtc, DateTime endUtc) GetTodayRangeInVietnamTime()
+    {
+        var vietnamNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _vietnamTimeZone);
+        var todayStartVietnam = vietnamNow.Date; // 00:00:00 Vietnam time
+        var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayStartVietnam, _vietnamTimeZone);
+        var todayEndUtc = todayStartUtc.AddDays(1);
+        
+        return (todayStartUtc, todayEndUtc);
     }
 
     private async Task ScanCard()
@@ -212,11 +225,8 @@
             _isExporting = true;
             StateHasChanged();
 
-            var utcNow = DateTime.UtcNow;
-            var vietnamNow = utcNow.AddHours(7); // Việt Nam là UTC+7
-            var todayStartVietnam = vietnamNow.Date;
-            var todayStartUtc = todayStartVietnam.AddHours(-7); // Convert về UTC
-            var todayEndUtc = todayStartUtc.AddDays(1);
+            var (todayStartUtc, todayEndUtc) = GetTodayRangeInVietnamTime();
+            
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
                     .Where(x => x.CreatedAt >= todayStartUtc && x.CreatedAt < todayEndUtc)
@@ -292,11 +302,8 @@
     {
         try
         {
-            var utcNow = DateTime.UtcNow;
-            var vietnamNow = utcNow.AddHours(7); // Việt Nam là UTC+7
-            var todayStartVietnam = vietnamNow.Date;
-            var todayStartUtc = todayStartVietnam.AddHours(-7); // Convert về UTC
-            var todayEndUtc = todayStartUtc.AddDays(1);
+            var (todayStartUtc, todayEndUtc) = GetTodayRangeInVietnamTime();
+            
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
                     .Where(x => x.CreatedAt >= todayStartUtc && x.CreatedAt < todayEndUtc)
@@ -306,6 +313,7 @@
                 DbContext.BorrowRecords.RemoveRange(borrowRecords);
                 await DbContext.SaveChangesAsync();
             }
+
             Snackbar.Add("Xóa dữ liệu cũ thành công!", Severity.Success, (cfg) =>
             {
                 cfg.RequireInteraction = false;
