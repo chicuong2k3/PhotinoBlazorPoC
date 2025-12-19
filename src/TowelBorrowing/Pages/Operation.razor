@@ -6,6 +6,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<Operation> Logger
 @inject IBorrowNotificationService NotificationService
+@inject ILogger<Operation> Logger
 
 @implements IAsyncDisposable
 
@@ -49,40 +50,40 @@
         </MudItem>
         <MudItem xs="6">
             <MudTextField @bind-Value="@_borrowCount" Immediate 
-                          Style="width: 100%" ShrinkLabel
-                      Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng mượn" />
+            Style="width: 100%" ShrinkLabel
+            Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng mượn" />
 
-            
+
         </MudItem>
         <MudItem xs="6">
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
-                       Size="Size.Small"
-                       OnClick="@(() => Submit("borrow"))"
-                       Disabled="@_isSubmitting"
-                       Ripple="false" DropShadow="false">
+            Size="Size.Small"
+            OnClick="@(() => Submit("borrow"))"
+            Disabled="@_isSubmitting"
+            Ripple="false" DropShadow="false">
                 Mượn
             </HUIButton>
         </MudItem>
 
         <MudItem xs="6">
             <MudTextField @bind-Value="@_returnCount" 
-                          Immediate Style="width: 100%" ShrinkLabel 
-                      Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng trả" />
+            Immediate Style="width: 100%" ShrinkLabel 
+            Margin="Margin.Dense" Variant="Variant.Outlined" Label="Số lượng trả" />
         </MudItem>
         <MudItem xs="6">
             <HUIButton Color="Color.Primary" Variant="Variant.Filled" Style="width: 100%"
-                       Size="Size.Small"
-                       OnClick="@(() => Submit("return"))"
-                       Disabled="@_isSubmitting"
-                       Ripple="false" DropShadow="false">
+            Size="Size.Small"
+            OnClick="@(() => Submit("return"))"
+            Disabled="@_isSubmitting"
+            Ripple="false" DropShadow="false">
                 Trả
             </HUIButton>
         </MudItem>
         <MudItem xs="12">
             <HUIButton Color="Color.Secondary" Variant="Variant.Outlined" Style="width: 100%"
-                       Size="Size.Small"
-                       OnClick="@(() => NavigationManager.NavigateTo("/"))"
-                       Ripple="false" DropShadow="false">
+            Size="Size.Small"
+            OnClick="@(() => NavigationManager.NavigateTo("/"))"
+            Ripple="false" DropShadow="false">
                 Thoát
             </HUIButton>
         </MudItem>
@@ -132,7 +133,7 @@
     protected override async Task OnInitializedAsync()
     {
         await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-        
+
         _card = await dbContext.GuestCards
             .FirstOrDefaultAsync(x => x.CardNumber == CardNumber);
 
@@ -159,7 +160,7 @@
         if (_card == null) return;
 
         await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-        
+
         var todayStartUtc = GetTodayStartUtc();
         var todayEndUtc = GetTodayEndUtc();
 
@@ -210,13 +211,13 @@
         try
         {
             await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-            
+
             var todayStartUtc = GetTodayStartUtc();
             var todayEndUtc = GetTodayEndUtc();
 
             // Use transaction for atomicity
             using var transaction = await dbContext.Database.BeginTransactionAsync();
-            
+
             try
             {
                 var borrowRecord = await dbContext.BorrowRecords
@@ -245,12 +246,19 @@
                         return;
                     }
                     await dbContext.SaveChangesAsync();
-                    
+
+                    Logger.LogWarning("Action: Mượn {BorrowCount} khăn. Phòng: {RoomNo}, Tòa: {Building}. Số lượng mượn hiện tại: {BorrowQuantity}. Số lượng trả hiện tại: {ReturnQuantity}",
+                        _borrowCount, borrowRecord.GuestCard.RoomNo, borrowRecord.GuestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
+
+
                     // Reload the entity to get updated values from database
                     await dbContext.Entry(borrowRecord).ReloadAsync();
+
+
                     
+
                     await transaction.CommitAsync();
-                    
+
                     // Notify others (not yourself)
                     await NotificationService.NotifyBorrowAsync(_card.CardNumber, _card.RoomNo, _card.Building, _borrowCount);
                     
@@ -272,11 +280,19 @@
                         return;
                     }
                     await dbContext.SaveChangesAsync();
+
+                    Logger.LogWarning("Action: Trả {ReturnCount} khăn. Phòng: {RoomNo}, Tòa: {Building}. Số lượng mượn hiện tại: {BorrowQuantity}. Số lượng trả hiện tại: {ReturnQuantity}",
+                         _returnCount, borrowRecord.GuestCard.RoomNo, borrowRecord.GuestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
+
                     
                     // Reload the entity to get updated values from database
                     await dbContext.Entry(borrowRecord).ReloadAsync();
+
+
+                    
                     
                     await transaction.CommitAsync();
+
                     
                     // Notify others (not yourself)
                     await NotificationService.NotifyReturnAsync(_card.CardNumber, _card.RoomNo, _card.Building, _returnCount);
@@ -302,7 +318,7 @@
         catch (Exception e)
         {
             Logger.LogError("Error while borrowing/returning: {errMessage}", e.Message);
-            Snackbar.Add($"Có lỗi xảy ra! Thử lại sau!", Severity.Error, (cfg) =>
+            Snackbar.Add($"Có lỗi xảy ra! Thử lại sau! {e.Message}", Severity.Error, (cfg) =>
             {
                 cfg.RequireInteraction = false;
                 cfg.VisibleStateDuration = 800;

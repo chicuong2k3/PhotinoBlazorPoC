@@ -34,7 +34,7 @@ internal class OcrService : IOcrService
 
 		var apiUrl = (await _dbContext.AppSettings.FirstOrDefaultAsync(x => x.Key == Constants.OcrApiUrl))?.Value
 			?? "http://localhost:10000";
-		var response = await _client.PostAsync($"{apiUrl.Trim("/")}/ocr", form);
+		var response = await _client.PostAsync($"{apiUrl.Trim('/')}/ocr", form);
 
 		var json = await response.Content.ReadAsStringAsync();
 

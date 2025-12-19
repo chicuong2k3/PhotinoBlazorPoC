@@ -32,6 +32,9 @@ internal class ExportService : IExportService
 
 		ws.Range(1, 1, 1, 7).Style.Font.SetBold();
 
+		int borrowSum = 0;
+		int returnSum = 0;
+		int remainSum = 0;
 
 		int row = 2;
 		foreach (var r in borrowRecords)
@@ -50,8 +53,17 @@ internal class ExportService : IExportService
 			ws.Cell(row, 4).Value = r.BorrowQuantity;
 			ws.Cell(row, 5).Value = r.ReturnQuantity;
 			ws.Cell(row, 6).Value = r.BorrowQuantity - r.ReturnQuantity;
+
+			borrowSum += r.BorrowQuantity;
+			returnSum += r.ReturnQuantity;
+			remainSum += (r.BorrowQuantity - r.ReturnQuantity);
+
 			row++;
 		}
+
+		ws.Cell(row, 4).Value = borrowSum;
+		ws.Cell(row, 5).Value = returnSum;
+		ws.Cell(row, 6).Value = remainSum;
 
 		ws.Columns().AdjustToContents();
 

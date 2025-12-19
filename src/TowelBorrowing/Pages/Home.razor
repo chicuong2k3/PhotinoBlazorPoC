@@ -10,17 +10,18 @@
 @inject ILogger<Home> Logger
 @inject IDialogService DialogService
 @inject IDatabaseService DatabaseService
+@inject ILogger<Home> Logger
 
 <MudStack>
     <MudStack Row>
         <HUIButton OnClick="ScanCard" Style="width: 100%" Size="Size.Small"
-               Color="Color.Primary" Variant="Variant.Filled" Loading="@_isScanning"
-               Ripple="false" DropShadow="false">
+        Color="Color.Primary" Variant="Variant.Filled" Loading="@_isScanning"
+        Ripple="false" DropShadow="false">
             Quét Phòng
         </HUIButton>
         <HUIButton OnClick="OpenFindManually" Style="width: 100%" Size="Size.Small"
-                   Color="Color.Primary" Variant="Variant.Filled" 
-                   Ripple="false" DropShadow="false">
+        Color="Color.Primary" Variant="Variant.Filled" 
+        Ripple="false" DropShadow="false">
             Nhập Phòng Thủ Công
         </HUIButton>
     </MudStack>
@@ -29,8 +30,8 @@
         <ActivatorContent>
             <HUIButton Variant="Variant.Filled" Loading="@_isImporting"
             Size="Size.Small" Style="width: 100%"
-                       Color="Color.Primary" Ripple="false" DropShadow="false"
-                       StartIcon="@Icons.Material.Filled.ImportExport">
+            Color="Color.Primary" Ripple="false" DropShadow="false"
+            StartIcon="@Icons.Material.Filled.ImportExport">
                 Cập Nhật Số Lượng Khách Trong Ngày 
             </HUIButton>
         </ActivatorContent>
@@ -38,16 +39,16 @@
 
     <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
     Loading="@_isExporting"
-               StartIcon="@Icons.Material.Filled.ImportExport"
-               OnClick="ExportExcel" 
-               Ripple="false" DropShadow="false">
+    StartIcon="@Icons.Material.Filled.ImportExport"
+    OnClick="ExportExcel" 
+    Ripple="false" DropShadow="false">
         Xuất Excel Cuối Ngày
     </HUIButton>
 
     <HUIButton Color="Color.Primary" Variant="Variant.Filled" FullWidth Size="Size.Small"
-               StartIcon="@Icons.Material.Filled.Settings"
-               OnClick="@(() => NavigationManager.NavigateTo("/settings"))"
-               Ripple="false" DropShadow="false">
+    StartIcon="@Icons.Material.Filled.Settings"
+    OnClick="@(() => NavigationManager.NavigateTo("/settings"))"
+    Ripple="false" DropShadow="false">
         Cấu Hình
     </HUIButton>
 
@@ -60,15 +61,17 @@
         </HUIButton> *@
     </MudStack>
     <MudText Typo="Typo.subtitle2">Dung lượng database còn lại: @_storageInfo?.RemainingSize</MudText>
+    <MudText Typo="Typo.subtitle2">Tổng khăn mượn hiện tại: @_currentBorrowSum</MudText>
 </MudStack>
 
 @code {
-    private bool _isScanning = false;
+    private bool _isScanning = false; // thời gian mượn mỗi lần =)) cái gần nhất mới cập nật thì dc; ghi vo log tung lan thao tac dc k chu để coi
     private bool _isImporting = false;
     private bool _isExporting = false;
     IList<IBrowserFile> _files = new List<IBrowserFile>();
     private DatabaseStorageInfo? _storageInfo;
-    
+    private int _currentBorrowSum = 0;
+
     // ✅ Khai báo Vietnam timezone một lần, dùng chung cho toàn bộ component
     private static readonly TimeZoneInfo _vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
@@ -78,13 +81,29 @@
         await base.OnInitializedAsync();
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        var (todayStartUtc, todayEndUtc) = GetTodayRangeInVietnamTime();
+
+        var borrowRecords = await DbContext.BorrowRecords
+                .Include(x => x.GuestCard)
+                .Where(x => x.CreatedAt >= todayStartUtc && x.CreatedAt < todayEndUtc)
+                .ToListAsync();
+
+        if (borrowRecords.Any())
+        {
+            _currentBorrowSum = borrowRecords.Sum(x => x.BorrowQuantity);
+            StateHasChanged();
+        }
+    }
+
     private (DateTime startUtc, DateTime endUtc) GetTodayRangeInVietnamTime()
     {
         var vietnamNow = TimeZoneInfo.ConvertTime(DateTime.UtcNow, _vietnamTimeZone);
         var todayStartVietnam = vietnamNow.Date; // 00:00:00 Vietnam time
         var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayStartVietnam, _vietnamTimeZone);
         var todayEndUtc = todayStartUtc.AddDays(1);
-        
+
         return (todayStartUtc, todayEndUtc);
     }
 
@@ -109,6 +128,8 @@
                 });
                 return;
             }
+
+            Logger.LogWarning("Scan phòng: {RoomNo}, Tòa: {Building}", existingCard.RoomNo, existingCard.Building);
 
             NavigationManager.NavigateTo($"/operation/{existingCard.CardNumber}");
         }
@@ -194,7 +215,7 @@
 
             if (toUpdate.Any())
                 await DbContext.BulkUpdateAsync(toUpdate);
-            
+
             if (toAdd.Any())
                 await DbContext.BulkInsertAsync(toAdd);
 
@@ -226,7 +247,7 @@
             StateHasChanged();
 
             var (todayStartUtc, todayEndUtc) = GetTodayRangeInVietnamTime();
-            
+
             var borrowRecords = await DbContext.BorrowRecords
                     .Include(x => x.GuestCard)
                     .Where(x => x.CreatedAt >= todayStartUtc && x.CreatedAt < todayEndUtc)
@@ -285,6 +306,8 @@
 
             if (guestCard != null)
             {
+                Logger.LogWarning("Mở phòng: {RoomNo}, Tòa: {Building}", guestCard.RoomNo, guestCard.Building);
+
                 NavigationManager.NavigateTo($"/operation/{guestCard.CardNumber}");
             }
             else

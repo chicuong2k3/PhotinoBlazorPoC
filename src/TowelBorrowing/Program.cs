@@ -47,7 +47,7 @@ public class Program
 		var connectionString = config.GetConnectionString("DefaultConnection");
 
 		Log.Logger = new LoggerConfiguration()
-						.MinimumLevel.Information()
+						.MinimumLevel.Warning()
 						.WriteTo.File(Path.Combine(logDir, "log-.txt"),          
 									  rollingInterval: RollingInterval.Day,
 									  retainedFileCountLimit: 7)
@@ -102,8 +102,8 @@ public class Program
 		var app = appBuilder.Build();
 		
 		// Start the logger service
-		var loggerService = app.Services.GetRequiredService<BorrowRecordLoggerService>();
-		loggerService.Start();
+		//var loggerService = app.Services.GetRequiredService<BorrowRecordLoggerService>();
+		//loggerService.Start();
 		
 		var iconPath = Path.Combine(AppContext.BaseDirectory, "favicon.ico");
 
