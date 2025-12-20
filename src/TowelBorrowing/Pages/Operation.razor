@@ -233,6 +233,9 @@
                     await dbContext.SaveChangesAsync();
                 }
 
+                var guestCard = await dbContext.GuestCards.FirstOrDefaultAsync(x => x.CardNumber == _card.CardNumber);
+                if (guestCard == null) return;
+
                 if (action == "borrow")
                 {
                     var result = borrowRecord.Borrow(_borrowCount);
@@ -245,10 +248,14 @@
                         });
                         return;
                     }
-                    await dbContext.SaveChangesAsync();
 
                     Logger.LogWarning("Action: Mượn {BorrowCount} khăn. Phòng: {RoomNo}, Tòa: {Building}. Số lượng mượn hiện tại: {BorrowQuantity}. Số lượng trả hiện tại: {ReturnQuantity}",
-                        _borrowCount, borrowRecord.GuestCard.RoomNo, borrowRecord.GuestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
+                       _borrowCount, guestCard.RoomNo, guestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
+
+                    await dbContext.SaveChangesAsync();
+
+                    // Logger.LogWarning("Action: Mượn {BorrowCount} khăn. Phòng: {RoomNo}, Tòa: {Building}. Số lượng mượn hiện tại: {BorrowQuantity}. Số lượng trả hiện tại: {ReturnQuantity}",
+                    //     _borrowCount, borrowRecord.GuestCard.RoomNo, borrowRecord.GuestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
 
 
                     // Reload the entity to get updated values from database
@@ -279,10 +286,14 @@
                         });
                         return;
                     }
-                    await dbContext.SaveChangesAsync();
 
                     Logger.LogWarning("Action: Trả {ReturnCount} khăn. Phòng: {RoomNo}, Tòa: {Building}. Số lượng mượn hiện tại: {BorrowQuantity}. Số lượng trả hiện tại: {ReturnQuantity}",
-                         _returnCount, borrowRecord.GuestCard.RoomNo, borrowRecord.GuestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
+                         _returnCount, guestCard.RoomNo, guestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
+
+                    await dbContext.SaveChangesAsync();
+
+                    // Logger.LogWarning("Action: Trả {ReturnCount} khăn. Phòng: {RoomNo}, Tòa: {Building}. Số lượng mượn hiện tại: {BorrowQuantity}. Số lượng trả hiện tại: {ReturnQuantity}",
+                    //      _returnCount, borrowRecord.GuestCard.RoomNo, borrowRecord.GuestCard.Building, borrowRecord.BorrowQuantity, borrowRecord.ReturnQuantity);
 
                     
                     // Reload the entity to get updated values from database
